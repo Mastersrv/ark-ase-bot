@@ -42,12 +42,12 @@ client.on("messageCreate", async (msg) => {
   const content = msg.content.toLowerCase();
 
   /* ===== LỆNH ===== */
-  if (content === "!ping")   return msg.reply("Pong!!! 🏓");
+  if (content === "!aya")   return msg.reply("Aya đây, mời bạn lói :akblackcat:");
 
   if (content === "!rank") {
     const xp = (await db.get(`xp_${msg.guildId}_${msg.author.id}`)) || 0;
     const level = calcLevel(xp);
-    return msg.reply(`Bạn đang ở cấp **${level}** với **${xp} XP**.`);
+    return msg.reply(`Bạn đang ở đẳng cấp **${level}** với **${xp} :emoji120: **.`);
   }
 
   if (content === "!top") {
@@ -74,7 +74,7 @@ client.on("messageCreate", async (msg) => {
     })
   );
 
-  return msg.channel.send(`🏆 **Top 5 người chơi nhiều chuyện trong ngày**\n${list.join("\n")}`);
+  return msg.channel.send(`🏆 **Top 5 người chơi nhiều chuyện nhất trong ngày**\n${list.join("\n")}`);
 }
 
   /* ===== CỘNG XP CHO TIN NHẮN THƯỜNG ===== */
