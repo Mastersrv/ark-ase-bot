@@ -43,11 +43,11 @@ client.on("messageCreate", async (msg) => {
 
   /* ===== LỆNH ===== */
   if (content === "!aya")   return msg.reply("Aya đây, mời bạn lói 🌹");
-
+  if (content === "!bot")   return msg.reply("Bot phiên bản thiếu kinh phí🤖,  gõ '!lenh' để xem chi tiết ♥️");
   if (content === "!rank") {
     const xp = (await db.get(`xp_${msg.guildId}_${msg.author.id}`)) || 0;
     const level = calcLevel(xp);
-    return msg.reply(`Bạn đang ở đẳng cấp **${level}** với **${xp} 🍀 **.`);
+    return msg.reply(`Anh bạn đang ở đẳng cấp **${level}** với **${xp} 🍀 **.`);
   }
 
   if (content === "!top") {
@@ -88,7 +88,7 @@ client.on("messageCreate", async (msg) => {
     const newLvl = calcLevel(xp);
 
     if (newLvl > oldLvl) {
-      msg.channel.send(`🎉 <@${msg.author.id}> đã lên cấp **${newLvl}**!`);
+      msg.channel.send(`🎉 chúc mừng <@${msg.author.id}> đã đạt cấp **${newLvl}**!, + 1 role nhiều chuyện`);
 
       /* ===== GÁN / GỠ ROLE THEO CẤP ===== */
       // tìm mốc role cao nhất ≤ cấp hiện tại
