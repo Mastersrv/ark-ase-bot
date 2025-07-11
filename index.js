@@ -1,4 +1,4 @@
-// index.js – ARK ASE bot 24/7 trên Render Free
+
 require("dotenv").config();
 const express = require("express");
 const { Client, GatewayIntentBits } = require("discord.js");
@@ -51,21 +51,31 @@ client.on("messageCreate", async (msg) => {
   }
 
   if (content === "!top") {
-    const all = await db.all();
-    const top = all
-      .filter(d => d.id.startsWith(`xp_${msg.guildId}_`))
-      .sort((a,b) => b.value - a.value)
-      .slice(0,5);
+  const all = await db.all();
+  const top = all
+    .filter(d => d.id.startsWith(`xp_${msg.guildId}_`))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
 
-    const list = top.length
-      ? top.map((d,i) => {
-          const uid = d.id.split("_")[2];
-          return `**#${i+1}** <@${uid}> – ${d.value} XP`;
-        }).join("\n")
-      : "Chưa có dữ liệu.";
+  // Lấy thông tin tên người dùng (không ping)
+  const list = await Promise.all(
+    top.map(async (d, i) => {
+      const userId = d.id.split("_")[2];
+      // Lấy member trong guild để có nickname; fallback sang user tag
+      let displayName;
+      try {
+        const member = await msg.guild.members.fetch(userId);
+        displayName = member.displayName || member.user.tag;
+      } catch {
+        // nếu không fetch được (rời guild) → chỉ hiển thị ID
+        displayName = `User ${userId}`;
+      }
+      return `**#${i + 1}** ${displayName} – ${d.value} XP`;
+    })
+  );
 
-    return msg.channel.send(`🏆 **Top 5 XP**\n${list}`);
-  }
+  return msg.channel.send(`🏆 **Top 5 người chơi nhiều chuyện trong ngày**\n${list.join("\n")}`);
+}
 
   /* ===== CỘNG XP CHO TIN NHẮN THƯỜNG ===== */
   if (!content.startsWith("!")) {
