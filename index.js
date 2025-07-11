@@ -42,12 +42,12 @@ client.on("messageCreate", async (msg) => {
   const content = msg.content.toLowerCase();
 
   /* ===== LỆNH ===== */
-  if (content === "!aya")   return msg.reply("Aya đây, mời bạn lói :akblackcat:");
+  if (content === "!aya")   return msg.reply("Aya đây, mời bạn lói 🌹");
 
   if (content === "!rank") {
     const xp = (await db.get(`xp_${msg.guildId}_${msg.author.id}`)) || 0;
     const level = calcLevel(xp);
-    return msg.reply(`Bạn đang ở đẳng cấp **${level}** với **${xp} :emoji120: **.`);
+    return msg.reply(`Bạn đang ở đẳng cấp **${level}** với **${xp} 🍀 **.`);
   }
 
   if (content === "!top") {
@@ -70,7 +70,7 @@ client.on("messageCreate", async (msg) => {
         // nếu không fetch được (rời guild) → chỉ hiển thị ID
         displayName = `User ${userId}`;
       }
-      return `**#${i + 1}** ${displayName} – ${d.value} XP`;
+      return `**#${i + 1}** ${displayName} – ${d.value} 🍀`;
     })
   );
 
