@@ -44,6 +44,7 @@ client.on("messageCreate", async (msg) => {
   /* ===== LỆNH ===== */
   if (content === "!aya")   return msg.reply("Aya đây, mời bạn lói 🌹");
   if (content === "!bot")   return msg.reply("Bot phiên bản thiếu kinh phí🤖,  gõ '!lenh' để xem chi tiết ♥️");
+  if (content === "!lenh")   return msg.reply("Đã thêm lệnh nào đâu, gõ !aya đi");
   if (content === "!rank") {
     const xp = (await db.get(`xp_${msg.guildId}_${msg.author.id}`)) || 0;
     const level = calcLevel(xp);
