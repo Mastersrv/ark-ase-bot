@@ -1,7 +1,7 @@
 {
   "name": "ark-ase-bot",
   "version": "1.0.0",
-  "description": "Discord bot ARK ASE - kh\u1edfi t\u1ea1o c\u01a1 b\u1ea3n",
+  "description": "Discord bot ARK ASE - khởi tạo cơ bản",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "discord.js": "^14.11.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0"
   }
 }
