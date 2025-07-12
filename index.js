@@ -61,30 +61,39 @@ client.on("messageCreate", async msg=>{
   if (content === "!ping") return msg.reply("Pong!!! 🏓");
 
   // !rank
-  if (content === "!rank"){
-    const xp=await db.get(`xp_${msg.guildId}_${msg.author.id}`)||0;
-    const lvl=calcLevel(xp);
-    return msg.reply(`Bạn đang ở cấp **${lvl}** với **${xp} 🍀**.`);
+  if (content === "!rank") {
+    const xp = (await db.get(`xp_${msg.guildId}_${msg.author.id}`)) || 0;
+    const level = calcLevel(xp);
+    return msg.reply(`Anh bạn đang ở đẳng cấp **${level}** với **${xp} 🍀 **.`);
   }
 
   // !top
-  if (content === "!top"){
-    const all = await db.all();
-    const top = all.filter(d=>d.id.startsWith(`xp_${msg.guildId}_`))
-                   .sort((a,b)=>b.value-a.value)
-                   .slice(0,5);
+  if (content === "!top") {
+  const all = await db.all();
+  const top = all
+    .filter(d => d.id.startsWith(`xp_${msg.guildId}_`))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
 
-    const list = await Promise.all(top.map(async (d,i)=>{
-      const uid=d.id.split("_")[2];
-      let name;
-      try{
-        const m=await msg.guild.members.fetch(uid);
-        name = m.displayName || m.user.username;
-      }catch{ name=`User${uid}`;}
-      return `**#${i+1}** ${name} – ${d.value} XP`;
-    }));
-    return msg.channel.send(`🏆 **Top 5 XP**\n${list.join("\n")||"Chưa có dữ liệu."}`);
-  }
+  // Lấy thông tin tên người dùng (không ping)
+  const list = await Promise.all(
+    top.map(async (d, i) => {
+      const userId = d.id.split("_")[2];
+      // Lấy member trong guild để có nickname; fallback sang user tag
+      let displayName;
+      try {
+        const member = await msg.guild.members.fetch(userId);
+        displayName = member.displayName || member.user.tag;
+      } catch {
+        // nếu không fetch được (rời guild) → chỉ hiển thị ID
+        displayName = `User ${userId}`;
+      }
+      return `**#${i + 1}** ${displayName} – ${d.value} 🍀`;
+    })
+  );
+
+  return msg.channel.send(`🏆 **Top 5 người chơi nhiều chuyện nhất trong ngày**\n${list.join("\n")}`);
+}
 
   /* ===== PHÁT NHẠC ===== */
   if (content.startsWith("!play ")){
