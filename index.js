@@ -270,9 +270,8 @@ client.on("interactionCreate", async (interaction) => {
             fields: [
                 { name: "MatriMutation", value: `\`${matri}\``, inline: true },
                 { name: "PatriMutation", value: `\`${patri}\``, inline: true },
-                { name: "Tổng", value: `\`${sum}\``, inline: true },
-                { name: "Kết quả", value: `**${result}**`, inline: true },
-                { name: "Loại Mutation", value: mutType, inline: true },
+                { name: "Kết quả", value: `### 🔢 **${result}**`, inline: false },
+                { name: "Loại Mutation", value: `### ${mutType}`, inline: false },
                 { name: "Tỷ lệ Mutation", value: `${mutationRate}%`, inline: true },
             ],
             footer: { text: `Giới hạn int32: từ ${INT32_MIN} đến ${INT32_MAX}` },
@@ -280,6 +279,7 @@ client.on("interactionCreate", async (interaction) => {
         }],
     });
 }
+
 
 
 
