@@ -235,10 +235,26 @@ client.on("interactionCreate", async (interaction) => {
     result = sum;
   }
 
-  return interaction.reply(
-    `🧬 Kết quả tính mutation:\nMatri: **${matri}**\nPatri: **${patri}**\n👉 Kết quả: **${result}**`
-  );
+  // 👉 Xác định Mut Dương hay Mut Âm
+  const mutType = result >= 0 ? "🌱 Mut Dương" : "🌑 Mut Âm";
+
+  return interaction.reply({
+    embeds: [{
+      title: "🧬 Kết quả Check Mutations",
+      color: result >= 0 ? 0x2ecc71 : 0xe74c3c, // xanh nếu dương, đỏ nếu âm
+      fields: [
+        { name: "MatriMutation", value: `\`${matri}\``, inline: true },
+        { name: "PatriMutation", value: `\`${patri}\``, inline: true },
+        { name: "Tổng", value: `\`${sum}\``, inline: true },
+        { name: "Kết quả", value: `**${result}**`, inline: true },
+        { name: "Loại Mutation", value: mutType, inline: true },
+      ],
+      footer: { text: `Giới hạn int32: từ ${INT32_MIN} đến ${INT32_MAX}` },
+      timestamp: new Date(),
+    }]
+  });
 }
+
 
 });
 
