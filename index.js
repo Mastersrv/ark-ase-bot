@@ -164,6 +164,16 @@ client.on("messageCreate", async msg => {
     }
   }
 });
+
+client.on("interactionCreate", async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === "ping") {
+    await interaction.reply("🏓 Pong!!! (Slash command)");
+  }
+});
+
+
 /* ---------- END listener ---------- */
 
 client.login(process.env.TOKEN);
