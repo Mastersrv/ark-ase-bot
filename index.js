@@ -1,23 +1,33 @@
 // index.js – ARK ASE bot
 require("dotenv").config();
 const express = require("express");
-const { 
-  Client, GatewayIntentBits, 
-  REST, Routes, SlashCommandBuilder, PermissionFlagsBits 
+const {
+  Client,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  PermissionFlagsBits,
 } = require("discord.js");
 const { QuickDB } = require("quick.db");
-const { 
-  joinVoiceChannel, createAudioPlayer, createAudioResource, StreamType,
-  entersState, VoiceConnectionStatus, NoSubscriberBehavior, getVoiceConnection
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  StreamType,
+  entersState,
+  VoiceConnectionStatus,
+  NoSubscriberBehavior,
+  getVoiceConnection,
 } = require("@discordjs/voice");
-const ytdl  = require("ytdl-core");
+const ytdl = require("ytdl-core");
 const ffmpeg = require("ffmpeg-static");
 const { spawn } = require("child_process");
 
 const db = new QuickDB();
 
 /* ---------- KEEP-ALIVE ---------- */
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 3000;
 app.get("/", (_, res) => res.send("✅ Bot is running!"));
 app.listen(PORT, () => console.log(`🌐 Keep-alive server on ${PORT}`));
@@ -28,7 +38,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
   ],
 });
 
@@ -38,21 +48,37 @@ client.once("ready", () => {
 
 /* ---------- XP ⇄ ROLE ---------- */
 const levelRoles = {
-  1:   "1393347597359382723",
-  10:  "1393347839152750734",
+  1: "1393347597359382723",
+  10: "1393347839152750734",
   100: "1393347907972890754",
   999: "1393347979427057706",
 };
-const calcLevel = xp => Math.floor(0.1 * Math.sqrt(xp));
+const calcLevel = (xp) => Math.floor(0.1 * Math.sqrt(xp));
 
 /* ---------- Audio player ---------- */
 const player = createAudioPlayer({
-  behaviors: { noSubscriber: NoSubscriberBehavior.Pause }
+  behaviors: { noSubscriber: NoSubscriberBehavior.Pause },
 });
 
 /* ---------- Slash Commands Register ---------- */
 async function registerCommands() {
-  const commands = [ 
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("check_mutations")
+      .setDescription("Kiểm tra kết quả tính toán mutation với giới hạn 32-bit")
+      .addIntegerOption((opt) =>
+        opt
+          .setName("matrimutation")
+          .setDescription("Nhập giá trị MatriMutation")
+          .setRequired(true)
+      )
+      .addIntegerOption((opt) =>
+        opt
+          .setName("patrimutation")
+          .setDescription("Nhập giá trị PatriMutation")
+          .setRequired(true)
+      ),
+
     new SlashCommandBuilder()
       .setName("help")
       .setDescription("Xem danh sách lệnh"),
@@ -60,15 +86,21 @@ async function registerCommands() {
     new SlashCommandBuilder()
       .setName("userinfo")
       .setDescription("Xem thông tin của 1 thành viên")
-      .addUserOption(opt =>
-        opt.setName("target").setDescription("Chọn thành viên").setRequired(false)
+      .addUserOption((opt) =>
+        opt
+          .setName("target")
+          .setDescription("Chọn thành viên")
+          .setRequired(false)
       ),
 
     new SlashCommandBuilder()
       .setName("rank")
       .setDescription("Xem cấp độ và XP của bạn hoặc người khác")
-      .addUserOption(opt =>
-        opt.setName("target").setDescription("Chọn thành viên").setRequired(false)
+      .addUserOption((opt) =>
+        opt
+          .setName("target")
+          .setDescription("Chọn thành viên")
+          .setRequired(false)
       ),
 
     new SlashCommandBuilder()
@@ -78,14 +110,12 @@ async function registerCommands() {
     new SlashCommandBuilder()
       .setName("play")
       .setDescription("Phát nhạc từ YouTube")
-      .addStringOption(opt =>
+      .addStringOption((opt) =>
         opt.setName("url").setDescription("Link YouTube").setRequired(true)
       ),
 
-    new SlashCommandBuilder()
-      .setName("stop")
-      .setDescription("Dừng nhạc"),
-  ].map(cmd => cmd.toJSON());
+    new SlashCommandBuilder().setName("stop").setDescription("Dừng nhạc"),
+  ].map((cmd) => cmd.toJSON());
 
   const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
@@ -96,7 +126,7 @@ async function registerCommands() {
         process.env.CLIENT_ID,
         "1168873250701443213"
       ),
-      { body: commands },
+      { body: commands }
     );
     console.log("✅ Slash commands đã đăng ký thành công!");
   } catch (error) {
@@ -107,27 +137,39 @@ async function registerCommands() {
 registerCommands();
 
 /* ---------- Interaction Handler ---------- */
-client.on("interactionCreate", async interaction => {
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "help") {
-    await interaction.reply("📜 Các lệnh: `/help`, `/userinfo`, `/rank`, `/top`, `/play`, `/stop`");
+    await interaction.reply(
+      "📜 Các lệnh: `/help`, `/userinfo`, `/rank`, `/top`, `/play`, `/stop`"
+    );
   }
 
   if (interaction.commandName === "userinfo") {
     const user = interaction.options.getUser("target") || interaction.user;
     const member = await interaction.guild.members.fetch(user.id);
     await interaction.reply({
-      embeds: [{
-        title: `Thông tin của ${user.username}`,
-        fields: [
-          { name: "ID", value: user.id, inline: true },
-          { name: "Ngày tham gia server", value: `<t:${Math.floor(member.joinedTimestamp/1000)}:R>`, inline: true },
-          { name: "Ngày tạo tài khoản", value: `<t:${Math.floor(user.createdTimestamp/1000)}:R>`, inline: true },
-        ],
-        thumbnail: { url: user.displayAvatarURL({ size: 1024 }) },
-        color: 0x00AE86
-      }]
+      embeds: [
+        {
+          title: `Thông tin của ${user.username}`,
+          fields: [
+            { name: "ID", value: user.id, inline: true },
+            {
+              name: "Ngày tham gia server",
+              value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`,
+              inline: true,
+            },
+            {
+              name: "Ngày tạo tài khoản",
+              value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
+              inline: true,
+            },
+          ],
+          thumbnail: { url: user.displayAvatarURL({ size: 1024 }) },
+          color: 0x00ae86,
+        },
+      ],
     });
   }
 
@@ -135,13 +177,15 @@ client.on("interactionCreate", async interaction => {
     const target = interaction.options.getUser("target") || interaction.user;
     const xp = (await db.get(`xp_${interaction.guildId}_${target.id}`)) || 0;
     const level = calcLevel(xp);
-    await interaction.reply(`🎖️ ${target.username} đang ở cấp **${level}** với **${xp} 🍀**`);
+    await interaction.reply(
+      `🎖️ ${target.username} đang ở cấp **${level}** với **${xp} 🍀**`
+    );
   }
 
   if (interaction.commandName === "top") {
     const all = await db.all();
     const top = all
-      .filter(d => d.id.startsWith(`xp_${interaction.guildId}_`))
+      .filter((d) => d.id.startsWith(`xp_${interaction.guildId}_`))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
 
@@ -152,16 +196,20 @@ client.on("interactionCreate", async interaction => {
         try {
           const m = await interaction.guild.members.fetch(uid);
           name = m.displayName || m.user.tag;
-        } catch { name = `User ${uid}`; }
+        } catch {
+          name = `User ${uid}`;
+        }
         return `**#${i + 1}** ${name} – ${d.value} 🍀`;
       })
     );
     await interaction.reply(`🏆 **Top 5 nhiều XP nhất**\n${list.join("\n")}`);
   }
- 
+
   if (interaction.commandName === "play") {
-  return interaction.reply("🎵 Lệnh `/play` hiện đang được nâng cấp, vui lòng thử lại sau!");
-}
+    return interaction.reply(
+      "🎵 Lệnh `/play` hiện đang được nâng cấp, vui lòng thử lại sau!"
+    );
+  }
 
   if (interaction.commandName === "stop") {
     const conn = getVoiceConnection(interaction.guild.id);
@@ -169,21 +217,49 @@ client.on("interactionCreate", async interaction => {
     conn.destroy();
     return interaction.reply("⏹️ Đã dừng nhạc.");
   }
+
+  if (interaction.commandName === "check_mutations") {
+  const matri = interaction.options.getInteger("matrimutation");
+  const patri = interaction.options.getInteger("patrimutation");
+  const sum = matri + patri;
+
+  const INT32_MAX = 2147483647;
+  const INT32_MIN = -2147483648;
+  let result;
+
+  if (sum > INT32_MAX) {
+    result = INT32_MIN - (sum - (INT32_MAX + 1));
+  } else if (sum < INT32_MIN) {
+    result = INT32_MAX + 1 + (sum - INT32_MIN);
+  } else {
+    result = sum;
+  }
+
+  return interaction.reply(
+    `🧬 Kết quả tính mutation:\nMatri: **${matri}**\nPatri: **${patri}**\n👉 Kết quả: **${result}**`
+  );
+}
+
 });
 
 /* ---------- XP khi chat bình thường ---------- */
-client.on("messageCreate", async msg => {
+client.on("messageCreate", async (msg) => {
   if (msg.author.bot) return;
   if (!msg.content.startsWith("!")) {
     const key = `xp_${msg.guildId}_${msg.author.id}`;
-    let xp = await db.get(key) || 0;
-    xp += 10; await db.set(key, xp);
+    let xp = (await db.get(key)) || 0;
+    xp += 10;
+    await db.set(key, xp);
 
-    const old = calcLevel(xp - 10), lvl = calcLevel(xp);
+    const old = calcLevel(xp - 10),
+      lvl = calcLevel(xp);
     if (lvl > old) {
       msg.channel.send(`🎉 <@${msg.author.id}> đã lên cấp **${lvl}**!`);
-      const target = Object.keys(levelRoles).map(Number).sort((a, b) => b - a)
-                       .filter(l => lvl >= l).pop();
+      const target = Object.keys(levelRoles)
+        .map(Number)
+        .sort((a, b) => b - a)
+        .filter((l) => lvl >= l)
+        .pop();
       if (target) {
         const member = await msg.guild.members.fetch(msg.author.id);
         for (const id of Object.values(levelRoles))
