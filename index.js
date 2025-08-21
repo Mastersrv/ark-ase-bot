@@ -31,6 +31,37 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates
   ],
 });
+const { REST, Routes, SlashCommandBuilder } = require("discord.js");
+
+async function registerCommands() {
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("ping")
+      .setDescription("Kiểm tra độ trễ của bot")
+      .toJSON(),
+  ];
+
+  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+
+  try {
+    console.log("🔄 Đang đăng ký slash commands...");
+    await rest.put(
+  Routes.applicationGuildCommands(
+    process.env.CLIENT_ID,
+    process.env.GUILD_ID
+  ),
+  { body: commands },
+);
+
+    console.log("✅ Slash commands đã đăng ký thành công!");
+  } catch (error) {
+    console.error("❌ Lỗi đăng ký:", error);
+  }
+}
+
+// gọi hàm để đăng ký ngay khi bot start
+registerCommands();
+
 
 client.once("ready", () =>
   console.log(`✅ Logged in as ${client.user.tag}`)
