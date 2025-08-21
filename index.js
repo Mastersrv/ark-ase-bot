@@ -12,7 +12,7 @@ const { joinVoiceChannel,
         NoSubscriberBehavior,
         getVoiceConnection } = require("@discordjs/voice");
 const ytdl  = require("ytdl-core");
-const ffmpeg = require("ffmpeg-static");      // ⟵ PHẦN ĐÃ THÊM
+const ffmpeg = require("ffmpeg-static");      
 
 const db = new QuickDB();
 

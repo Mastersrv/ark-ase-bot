@@ -14,7 +14,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   try {
     console.log("🔄 Đang đăng ký slash commands...");
     await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID), // Global command
+      Routes.applicationCommands(process.env.CLIENT_ID), 
       { body: commands },
     );
     console.log("✅ Slash commands đã đăng ký thành công!");
