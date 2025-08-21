@@ -35,11 +35,52 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 async function registerCommands() {
   const commands = [
-    new SlashCommandBuilder()
-      .setName("ping")
-      .setDescription("Kiểm tra độ trễ của bot")
-      .toJSON(),
-  ];
+  new SlashCommandBuilder()
+    .setName("help")
+    .setDescription("Xem danh sách lệnh"),
+  
+  new SlashCommandBuilder()
+    .setName("userinfo")
+    .setDescription("Xem thông tin của 1 thành viên")
+    .addUserOption(opt =>
+      opt.setName("target")
+         .setDescription("Chọn thành viên")
+         .setRequired(false)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("rank")
+    .setDescription("Xem cấp độ và XP của bạn hoặc người khác")
+    .addUserOption(opt =>
+      opt.setName("target")
+         .setDescription("Chọn thành viên")
+         .setRequired(false)
+    ),
+
+  new SlashCommandBuilder()
+    .setName("top")
+    .setDescription("Xem top 5 người nhiều XP nhất"),
+
+  // Nhạc
+  new SlashCommandBuilder()
+    .setName("play")
+    .setDescription("Phát nhạc từ YouTube")
+    .addStringOption(opt =>
+      opt.setName("url")
+         .setDescription("Link YouTube")
+         .setRequired(true)
+    ),
+  new SlashCommandBuilder()
+    .setName("stop")
+    .setDescription("Dừng nhạc"),
+  new SlashCommandBuilder()
+    .setName("skip")
+    .setDescription("Bỏ qua bài hát hiện tại"),
+  new SlashCommandBuilder()
+    .setName("queue")
+    .setDescription("Xem danh sách phát"),
+].map(cmd => cmd.toJSON());
+
 
   const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
@@ -198,10 +239,77 @@ client.on("messageCreate", async msg => {
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === "ping") {
-    await interaction.reply("🏓 Pong!!! (Slash command)");
+  if (interaction.commandName === "help") {
+    await interaction.reply("📜 Các lệnh có: `/help`, `/userinfo`, `/rank`, `/top`, `/play`, `/stop`, `/skip`, `/queue`");
+  }
+
+  if (interaction.commandName === "userinfo") {
+    const user = interaction.options.getUser("target") || interaction.user;
+    const member = await interaction.guild.members.fetch(user.id);
+    await interaction.reply({
+      embeds: [{
+        title: `Thông tin của ${user.username}`,
+        fields: [
+          { name: "ID", value: user.id, inline: true },
+          { name: "Ngày tham gia server", value: `<t:${Math.floor(member.joinedTimestamp/1000)}:R>`, inline: true },
+          { name: "Ngày tạo tài khoản", value: `<t:${Math.floor(user.createdTimestamp/1000)}:R>`, inline: true },
+        ],
+        thumbnail: { url: user.displayAvatarURL({ size: 1024 }) },
+        color: 0x00AE86
+      }]
+    });
+  }
+
+  if (interaction.commandName === "rank") {
+    const target = interaction.options.getUser("target") || interaction.user;
+    const xp = (await db.get(`xp_${interaction.guildId}_${target.id}`)) || 0;
+    const level = calcLevel(xp);
+    await interaction.reply(`🎖️ ${target.username} đang ở cấp **${level}** với **${xp} 🍀**`);
+  }
+
+  if (interaction.commandName === "top") {
+    const all = await db.all();
+    const top = all
+      .filter(d => d.id.startsWith(`xp_${interaction.guildId}_`))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    const list = await Promise.all(
+      top.map(async (d, i) => {
+        const uid = d.id.split("_")[2];
+        let name;
+        try {
+          const m = await interaction.guild.members.fetch(uid);
+          name = m.displayName || m.user.tag;
+        } catch { name = `User ${uid}`; }
+        return `**#${i + 1}** ${name} – ${d.value} 🍀`;
+      })
+    );
+    await interaction.reply(`🏆 **Top 5 nhiều XP nhất**\n${list.join("\n")}`);
+  }
+
+  // ==== Nhạc (cơ bản) ====
+  if (interaction.commandName === "play") {
+    const url = interaction.options.getString("url");
+    // ... dùng lại code !play bạn đã viết, chỉ thay interaction.reply thay cho msg.reply
+    await interaction.reply(`🎶 Đang phát: ${url}`);
+  }
+
+  if (interaction.commandName === "stop") {
+    // ... code !stop
+    await interaction.reply("⏹️ Đã dừng nhạc.");
+  }
+
+  if (interaction.commandName === "skip") {
+    // ... thêm hàng chờ nhạc sau này
+    await interaction.reply("⏭️ Bỏ qua bài hát (demo).");
+  }
+
+  if (interaction.commandName === "queue") {
+    await interaction.reply("🎼 Hiện tại hàng chờ đang trống.");
   }
 });
+
 
 
 /* ---------- END listener ---------- */
