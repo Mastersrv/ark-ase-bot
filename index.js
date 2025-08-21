@@ -240,6 +240,8 @@ client.on("messageCreate", async msg => {
     }
   }
   if (interaction.commandName === "check_mutations") {
+  await interaction.deferReply(); // thông báo cho Discord "bot đang xử lý", tránh timeout
+
   const matri = interaction.options.getInteger("matrimutation");
   const patri = interaction.options.getInteger("patrimutation");
   const sum = matri + patri;
@@ -247,8 +249,7 @@ client.on("messageCreate", async msg => {
   const INT32_MAX = 2147483647;
   const INT32_MIN = -2147483648;
 
-  let result;
-
+  let result; 
   if (sum > INT32_MAX) {
     result = INT32_MIN - (sum - (INT32_MAX + 1));
   } else if (sum < INT32_MIN) {
@@ -257,13 +258,14 @@ client.on("messageCreate", async msg => {
     result = sum;
   }
 
-  await interaction.reply(
+  await interaction.editReply(
     `📊 MatriMutation: **${matri}**\n` +
     `📊 PatriMutation: **${patri}**\n` +
     `➕ Tổng: **${sum}**\n` +
-    `✅ Kết quả sau khi tính toán: **${result}**`
+    `✅ Kết quả: **${result}**`
   );
 }
+
 
 });
 
