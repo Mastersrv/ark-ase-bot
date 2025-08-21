@@ -59,7 +59,6 @@ async function registerCommands() {
   }
 }
 
-// gọi hàm để đăng ký ngay khi bot start
 registerCommands();
 
 
