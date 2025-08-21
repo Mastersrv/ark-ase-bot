@@ -160,40 +160,39 @@ client.on("interactionCreate", async interaction => {
   }
  
   if (interaction.commandName === "play") {
-    const url = interaction.options.getString("url");
-    if (!ytdl.validateURL(url)) return interaction.reply("❌ URL YouTube không hợp lệ!");
-    const vc = interaction.member.voice.channel;
-    if (!vc) return interaction.reply("⚠️ Bạn phải vào kênh thoại trước!");
+  const url = interaction.options.getString("url");
+  if (!ytdl.validateURL(url)) 
+    return interaction.reply("❌ URL YouTube không hợp lệ!");
 
-    const conn = joinVoiceChannel({
-      channelId: vc.id,
-      guildId:   vc.guild.id,
-      adapterCreator: vc.guild.voiceAdapterCreator,
-    });
-    try {
-      await entersState(conn, VoiceConnectionStatus.Ready, 30_000);
-    } catch {
-      return interaction.reply("🚫 Không thể kết nối voice!");
-    }
+  const vc = interaction.member.voice.channel;
+  if (!vc) return interaction.reply("⚠️ Bạn phải vào kênh thoại trước!");
 
-    const yt = ytdl(url, { quality: "highestaudio", highWaterMark: 1 << 25 });
-    const ff = spawn(ffmpeg, [
-      "-i", "pipe:0",
-      "-analyzeduration", "0",
-      "-loglevel", "0",
-      "-f", "opus",
-      "-ar", "48000",
-      "-ac", "2",
-      "pipe:1",
-    ], { stdio: ["pipe", "pipe", "ignore"] });
+  const conn = joinVoiceChannel({
+    channelId: vc.id,
+    guildId: vc.guild.id,
+    adapterCreator: vc.guild.voiceAdapterCreator,
+  });
 
-    yt.pipe(ff.stdin);
-    const resource = createAudioResource(ff.stdout, { inputType: StreamType.Opus });
-    player.play(resource);
-    conn.subscribe(player);
-
-    return interaction.reply(`🎶 Đang phát nhạc: ${url}`);
+  try {
+    await entersState(conn, VoiceConnectionStatus.Ready, 30_000);
+  } catch {
+    return interaction.reply("🚫 Không thể kết nối voice!");
   }
+
+  // ✅ Tối ưu: stream trực tiếp
+  const stream = ytdl(url, { 
+    filter: "audioonly", 
+    quality: "highestaudio", 
+    highWaterMark: 1 << 25 
+  });
+
+  const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
+  player.play(resource);
+  conn.subscribe(player);
+
+  return interaction.reply(`🎶 Đang phát nhạc: ${url}`);
+}
+
 
   if (interaction.commandName === "stop") {
     const conn = getVoiceConnection(interaction.guild.id);
