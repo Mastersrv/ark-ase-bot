@@ -54,6 +54,19 @@ const player = createAudioPlayer({
 async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
+  .setName("check_mutations")   // ⚠️ phải trùng chính xác
+  .setDescription("Kiểm tra kết quả cộng mutations với giới hạn int32")
+  .addIntegerOption(opt =>
+    opt.setName("matrimutation")
+       .setDescription("Giá trị MatriMutation")
+       .setRequired(true))
+  .addIntegerOption(opt =>
+    opt.setName("patrimutation")
+       .setDescription("Giá trị PatriMutation")
+       .setRequired(true)),
+
+
+    new SlashCommandBuilder()
       .setName("help")
       .setDescription("Xem danh sách lệnh"),
 
@@ -226,6 +239,33 @@ client.on("messageCreate", async msg => {
       }
     }
   }
+  if (interaction.commandName === "check_mutations") {
+  const matri = interaction.options.getInteger("matrimutation");
+  const patri = interaction.options.getInteger("patrimutation");
+  const sum = matri + patri;
+
+  const INT32_MAX = 2147483647;
+  const INT32_MIN = -2147483648;
+
+  let result;
+  if (sum > INT32_MAX) {
+    result = INT32_MIN - (sum - (INT32_MAX + 1));
+  } else if (sum < INT32_MIN) {
+    result = INT32_MAX + 1 + (sum - INT32_MIN);
+  } else {
+    result = sum;
+  }
+
+  await interaction.reply({
+    content:
+      `📊 MatriMutation: **${matri}**\n` +
+      `📊 PatriMutation: **${patri}**\n` +
+      `➕ Tổng: **${sum}**\n` +
+      `✅ Kết quả: **${result}**`,
+    ephemeral: false // đổi thành true nếu muốn chỉ người gõ lệnh thấy
+  });
+}
+
 });
 
 client.login(process.env.TOKEN);
