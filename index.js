@@ -48,7 +48,7 @@ async function registerCommands() {
     await rest.put(
   Routes.applicationGuildCommands(
     process.env.CLIENT_ID,
-    process.env.GUILD_ID
+    "1168873250701443213"
   ),
   { body: commands },
 );
