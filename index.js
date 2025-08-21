@@ -3,16 +3,14 @@ require("dotenv").config();
 const express = require("express");
 const { 
   Client, GatewayIntentBits, 
-  REST, Routes, SlashCommandBuilder, PermissionFlagsBits 
+  REST, Routes, SlashCommandBuilder 
 } = require("discord.js");
 const { QuickDB } = require("quick.db");
 const { 
   joinVoiceChannel, createAudioPlayer, createAudioResource, StreamType,
   entersState, VoiceConnectionStatus, NoSubscriberBehavior, getVoiceConnection
 } = require("@discordjs/voice");
-const ytdl  = require("ytdl-core");
-const ffmpeg = require("ffmpeg-static");
-const { spawn } = require("child_process");
+const ytdl  = require("ytdl-core"); 
 
 const db = new QuickDB();
 
@@ -48,6 +46,10 @@ const calcLevel = xp => Math.floor(0.1 * Math.sqrt(xp));
 /* ---------- Audio player ---------- */
 const player = createAudioPlayer({
   behaviors: { noSubscriber: NoSubscriberBehavior.Pause }
+});
+
+player.on("error", err => {
+  console.error("🎵 Player error:", err);
 });
 
 /* ---------- Slash Commands Register ---------- */
@@ -111,18 +113,21 @@ client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "help") {
-    await interaction.reply("📜 Các lệnh: `/help`, `/userinfo`, `/rank`, `/top`, `/play`, `/stop`");
+    return interaction.reply("📜 Các lệnh: `/help`, `/userinfo`, `/rank`, `/top`, `/play`, `/stop`");
   }
 
   if (interaction.commandName === "userinfo") {
+    await interaction.deferReply();
     const user = interaction.options.getUser("target") || interaction.user;
-    const member = await interaction.guild.members.fetch(user.id);
-    await interaction.reply({
+    let member = null;
+    try { member = await interaction.guild.members.fetch(user.id); } catch {}
+
+    return interaction.editReply({
       embeds: [{
         title: `Thông tin của ${user.username}`,
         fields: [
           { name: "ID", value: user.id, inline: true },
-          { name: "Ngày tham gia server", value: `<t:${Math.floor(member.joinedTimestamp/1000)}:R>`, inline: true },
+          { name: "Ngày tham gia server", value: member ? `<t:${Math.floor(member.joinedTimestamp/1000)}:R>` : "N/A", inline: true },
           { name: "Ngày tạo tài khoản", value: `<t:${Math.floor(user.createdTimestamp/1000)}:R>`, inline: true },
         ],
         thumbnail: { url: user.displayAvatarURL({ size: 1024 }) },
@@ -135,10 +140,11 @@ client.on("interactionCreate", async interaction => {
     const target = interaction.options.getUser("target") || interaction.user;
     const xp = (await db.get(`xp_${interaction.guildId}_${target.id}`)) || 0;
     const level = calcLevel(xp);
-    await interaction.reply(`🎖️ ${target.username} đang ở cấp **${level}** với **${xp} 🍀**`);
+    return interaction.reply(`🎖️ ${target.username} đang ở cấp **${level}** với **${xp} 🍀**`);
   }
 
   if (interaction.commandName === "top") {
+    await interaction.deferReply();
     const all = await db.all();
     const top = all
       .filter(d => d.id.startsWith(`xp_${interaction.guildId}_`))
@@ -156,43 +162,42 @@ client.on("interactionCreate", async interaction => {
         return `**#${i + 1}** ${name} – ${d.value} 🍀`;
       })
     );
-    await interaction.reply(`🏆 **Top 5 nhiều XP nhất**\n${list.join("\n")}`);
+    return interaction.editReply(`🏆 **Top 5 nhiều XP nhất**\n${list.join("\n")}`);
   }
  
   if (interaction.commandName === "play") {
-  const url = interaction.options.getString("url");
-  if (!ytdl.validateURL(url)) 
-    return interaction.reply("❌ URL YouTube không hợp lệ!");
+    await interaction.deferReply();
+    const url = interaction.options.getString("url");
+    if (!ytdl.validateURL(url)) 
+      return interaction.editReply("❌ URL YouTube không hợp lệ!");
 
-  const vc = interaction.member.voice.channel;
-  if (!vc) return interaction.reply("⚠️ Bạn phải vào kênh thoại trước!");
+    const vc = interaction.member.voice.channel;
+    if (!vc) return interaction.editReply("⚠️ Bạn phải vào kênh thoại trước!");
 
-  const conn = joinVoiceChannel({
-    channelId: vc.id,
-    guildId: vc.guild.id,
-    adapterCreator: vc.guild.voiceAdapterCreator,
-  });
+    const conn = joinVoiceChannel({
+      channelId: vc.id,
+      guildId: vc.guild.id,
+      adapterCreator: vc.guild.voiceAdapterCreator,
+    });
 
-  try {
-    await entersState(conn, VoiceConnectionStatus.Ready, 30_000);
-  } catch {
-    return interaction.reply("🚫 Không thể kết nối voice!");
+    try {
+      await entersState(conn, VoiceConnectionStatus.Ready, 30_000);
+    } catch {
+      return interaction.editReply("🚫 Không thể kết nối voice!");
+    }
+
+    const stream = ytdl(url, { 
+      filter: "audioonly", 
+      quality: "highestaudio", 
+      highWaterMark: 1 << 25 
+    });
+
+    const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
+    player.play(resource);
+    conn.subscribe(player);
+
+    return interaction.editReply(`▶️ Đang phát nhạc: ${url}`);
   }
-
-  // ✅ Tối ưu: stream trực tiếp
-  const stream = ytdl(url, { 
-    filter: "audioonly", 
-    quality: "highestaudio", 
-    highWaterMark: 1 << 25 
-  });
-
-  const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
-  player.play(resource);
-  conn.subscribe(player);
-
-  return interaction.reply(`🎶 Đang phát nhạc: ${url}`);
-}
-
 
   if (interaction.commandName === "stop") {
     const conn = getVoiceConnection(interaction.guild.id);
@@ -226,5 +231,11 @@ client.on("messageCreate", async msg => {
     }
   }
 });
+
+/* ---------- Global error handlers ---------- */
+process.on("unhandledRejection", err => {
+  console.error("Unhandled rejection:", err);
+});
+client.on("error", console.error);
 
 client.login(process.env.TOKEN);
