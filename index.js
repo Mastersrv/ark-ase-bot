@@ -219,41 +219,68 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   if (interaction.commandName === "check_mutations") {
-  const matri = interaction.options.getInteger("matrimutation");
-  const patri = interaction.options.getInteger("patrimutation");
-  const sum = matri + patri;
+    const matri = interaction.options.getInteger("matrimutation");
+    const patri = interaction.options.getInteger("patrimutation");
 
-  const INT32_MAX = 2147483647;
-  const INT32_MIN = -2147483648;
-  let result;
+    const INT32_MAX = 2147483647;
+    const INT32_MIN = -2147483648;
 
-  if (sum > INT32_MAX) {
-    result = INT32_MIN - (sum - (INT32_MAX + 1));
-  } else if (sum < INT32_MIN) {
-    result = INT32_MAX + 1 + (sum - INT32_MIN);
-  } else {
-    result = sum;
-  }
+    let sum = matri + patri;
+    let result;
 
-  // 👉 Xác định Mut Dương hay Mut Âm
-  const mutType = result >= 0 ? "🌱 Mut Dương" : "🌑 Mut Âm";
+    if (sum > INT32_MAX) {
+        result = INT32_MIN - (sum - INT32_MAX + 1);
+    } else if (sum < INT32_MIN) {
+        result = INT32_MAX + 1 + (sum - INT32_MIN);
+    } else {
+        result = sum;
+    }
 
-  return interaction.reply({
-    embeds: [{
-      title: "🧬 Kết quả Check Mutations",
-      color: result >= 0 ? 0x2ecc71 : 0xe74c3c, // xanh nếu dương, đỏ nếu âm
-      fields: [
-        { name: "MatriMutation", value: `\`${matri}\``, inline: true },
-        { name: "PatriMutation", value: `\`${patri}\``, inline: true },
-        { name: "Tổng", value: `\`${sum}\``, inline: true },
-        { name: "Kết quả", value: `**${result}**`, inline: true },
-        { name: "Loại Mutation", value: mutType, inline: true },
-      ],
-      footer: { text: `Giới hạn int32: từ ${INT32_MIN} đến ${INT32_MAX}` },
-      timestamp: new Date(),
-    }]
-  });
+    // 👉 Xác định Mut Dương hay Mut Âm
+    const mutType = result >= 0 ? "☀️ Mut Dương" : "🌑 Mut Âm";
+
+    // 👉 Hàm tính tỷ lệ mutation trong ARK
+    function calcMutationRate(matri, patri) {
+        if (matri < 0) matri = 0;
+        if (patri < 0) patri = 0;
+
+        const rolls = 3;
+        const chancePerRoll = 0.025;
+
+        let effectiveRate;
+
+        if (matri >= 20 && patri >= 20) {
+            effectiveRate = 0; // cả 2 full
+        } else if (matri >= 20 || patri >= 20) {
+            effectiveRate = (1 - Math.pow(1 - chancePerRoll, rolls)) / 2;
+        } else {
+            effectiveRate = 1 - Math.pow(1 - chancePerRoll, rolls);
+        }
+
+        return (effectiveRate * 100).toFixed(2); // %
+    }
+
+    const mutationRate = calcMutationRate(matri, patri);
+
+    // 👉 Embed trả về
+    return interaction.reply({
+        embeds: [{
+            title: "🧬 Kết quả Check Mutations",
+            color: result >= 0 ? 0x2ecc71 : 0xe74c3c, // xanh nếu dương, đỏ nếu âm
+            fields: [
+                { name: "MatriMutation", value: `\`${matri}\``, inline: true },
+                { name: "PatriMutation", value: `\`${patri}\``, inline: true },
+                { name: "Tổng", value: `\`${sum}\``, inline: true },
+                { name: "Kết quả", value: `**${result}**`, inline: true },
+                { name: "Loại Mutation", value: mutType, inline: true },
+                { name: "Tỷ lệ Mutation", value: `${mutationRate}%`, inline: true },
+            ],
+            footer: { text: `Giới hạn int32: từ ${INT32_MIN} đến ${INT32_MAX}` },
+            timestamp: new Date(),
+        }],
+    });
 }
+
 
 
 });
