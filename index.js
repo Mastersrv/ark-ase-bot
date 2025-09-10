@@ -36,6 +36,7 @@ app.listen(PORT, () => console.log(`🌐 Keep-alive server on ${PORT}`));
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
@@ -312,5 +313,26 @@ client.on("messageCreate", async (msg) => {
     }
   }
 });
+
+/* ---------- Auto role cho thành viên mới ---------- */
+client.on("guildMemberAdd", async (member) => {
+  try {
+    console.log(`👋 Thành viên mới: ${member.user.tag} (ID: ${member.id})`);
+
+    const roleId = "1385209345192755221"; // ID role Server Tag
+    const role = member.guild.roles.cache.get(roleId);
+
+    if (!role) {
+      console.error("❌ Không tìm thấy role Server Tag!");
+      return;
+    }
+
+    await member.roles.add(role);
+    console.log(`✅ Đã gán role ${role.name} cho ${member.user.tag}`);
+  } catch (err) {
+    console.error("❌ Lỗi khi gán role:", err);
+  }
+});
+
 
 client.login(process.env.TOKEN);
