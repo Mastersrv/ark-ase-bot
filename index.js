@@ -8,6 +8,7 @@ const {
   Routes,
   SlashCommandBuilder,
   PermissionFlagsBits,
+  Partials
 } = require("discord.js");
 const { QuickDB } = require("quick.db");
 const {
@@ -40,7 +41,9 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessageReactions,
   ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 client.once("ready", () => {
@@ -332,6 +335,44 @@ client.on("guildMemberAdd", async (member) => {
   } catch (err) {
     console.error("❌ Lỗi khi gán role:", err);
   }
+});
+
+/* ---------- Reaction Role ---------- */
+const reactionRoles = {
+  "1415421191073562654": "1397120911215296583", // <:Aquatica:1415411111111111> -> role Aquatica
+  "🧬": "1392079828957528074",               // emoji mặc định 🧬 -> role Breeding
+};
+
+const reactionMessageId = "1211334614623461426"; // ID message có reaction
+
+client.on("messageReactionAdd", async (reaction, user) => {
+  if (reaction.partial) await reaction.fetch(); // 👈 cần nếu dùng partials
+  if (reaction.message.id !== reactionMessageId) return;
+  if (user.bot) return;
+
+  const key = reaction.emoji.id || reaction.emoji.name;
+  console.log("➡️ Emoji click:", key); // 👈 debug
+  const roleId = reactionRoles[key];
+  if (!roleId) return;
+
+  const member = await reaction.message.guild.members.fetch(user.id);
+  await member.roles.add(roleId).catch(console.error);
+  console.log(`✅ Đã gán role ${roleId} cho ${user.tag}`);
+});
+
+client.on("messageReactionRemove", async (reaction, user) => {
+  if (reaction.partial) await reaction.fetch();
+  if (reaction.message.id !== reactionMessageId) return;
+  if (user.bot) return;
+
+  const key = reaction.emoji.id || reaction.emoji.name;
+  console.log("➡️ Emoji remove:", key);
+  const roleId = reactionRoles[key];
+  if (!roleId) return;
+
+  const member = await reaction.message.guild.members.fetch(user.id);
+  await member.roles.remove(roleId).catch(console.error);
+  console.log(`❌ Đã gỡ role ${roleId} khỏi ${user.tag}`);
 });
 
 
