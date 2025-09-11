@@ -375,5 +375,27 @@ client.on("messageReactionRemove", async (reaction, user) => {
   console.log(`❌ Đã gỡ role ${roleId} khỏi ${user.tag}`);
 });
 
+/* ---------- Auto Role Breeding ---------- */
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+  const roleBreedBasic = "1392079828957528074"; // breed basic
+  const roleBreeding = "1415707578029047970";   // breeding
+
+  try {
+    // Khi thành viên mới nhận được role breed basic
+    if (
+      !oldMember.roles.cache.has(roleBreedBasic) && 
+      newMember.roles.cache.has(roleBreedBasic)
+    ) {
+      // Nếu chưa có role breeding thì thêm vào
+      if (!newMember.roles.cache.has(roleBreeding)) {
+        await newMember.roles.add(roleBreeding);
+        console.log(`✅ Đã thêm role Breeding cho ${newMember.user.tag}`);
+      }
+    }
+  } catch (err) {
+    console.error("❌ Lỗi khi auto thêm role breeding:", err);
+  }
+});
+
 
 client.login(process.env.TOKEN);
