@@ -322,7 +322,7 @@ client.on("guildMemberAdd", async (member) => {
   try {
     console.log(`👋 Thành viên mới: ${member.user.tag} (ID: ${member.id})`);
 
-    const roleId = "1385209345192755221"; // ID role Server Tag
+    const roleId = "1415665328943530025"; // ID role Server Tag
     const role = member.guild.roles.cache.get(roleId);
 
     if (!role) {
