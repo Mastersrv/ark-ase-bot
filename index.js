@@ -9,9 +9,9 @@ const {
   SlashCommandBuilder,
   PermissionFlagsBits,
   Partials,
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } = require("discord.js");
 const { QuickDB } = require("quick.db");
 const {
@@ -24,7 +24,7 @@ const {
   NoSubscriberBehavior,
   getVoiceConnection,
 } = require("@discordjs/voice");
-const ytdl = require("@distube/ytdl-core");
+const play = require("play-dl");
 const ffmpeg = require("ffmpeg-static");
 const { spawn } = require("child_process");
 
@@ -154,7 +154,10 @@ client.on("interactionCreate", async (interaction) => {
 
     if (interaction.customId === "resume") {
       player.unpause();
-      return interaction.reply({ content: "▶️ Tiếp tục phát", ephemeral: true });
+      return interaction.reply({
+        content: "▶️ Tiếp tục phát",
+        ephemeral: true,
+      });
     }
 
     if (interaction.customId === "skip") {
@@ -163,7 +166,10 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     if (interaction.customId === "queue") {
-      return interaction.reply({ content: "📃 Queue hiện chưa được cài đặt", ephemeral: true });
+      return interaction.reply({
+        content: "📃 Queue hiện chưa được cài đặt",
+        ephemeral: true,
+      });
     }
   }
 
@@ -247,54 +253,52 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     try {
-      const stream = ytdl(url, {
-        filter: "audioonly",
-        quality: "highestaudio",
-        highWaterMark: 1 << 25,
+      const stream = await play.stream(url);
+      const resource = createAudioResource(stream.stream, {
+        inputType: stream.type,
       });
-      const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
 
       player.play(resource);
       connection.subscribe(player);
 
       await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
 
-      const info = await ytdl.getInfo(url);
-      const embed = {
-        color: 0x1db954,
-        title: `🎵 Đang phát`,
-        description: `[${info.videoDetails.title}](${url})`,
-        thumbnail: { url: info.videoDetails.thumbnails[0].url },
-        fields: [
-          { name: "Kênh", value: info.videoDetails.author.name, inline: true },
-          { name: "Thời lượng", value: `${Math.floor(info.videoDetails.lengthSeconds / 60)} phút`, inline: true }
-        ],
-        footer: { text: `Yêu cầu bởi ${interaction.user.username}`, icon_url: interaction.user.displayAvatarURL() },
-        timestamp: new Date(),
-      };
+      const info = await play.video_info(url);
+      const video = info.video_details;
+const embed = {
+  color: 0x1db954,
+  title: `🎵 Đang phát`,
+  description: `[${video.title}](${url})`,
+  thumbnail: { url: video.thumbnails[0].url },
+  fields: [
+    { name: "Kênh", value: video.channel.name, inline: true },
+    { name: "Thời lượng", value: `${Math.floor(video.durationInSec / 60)} phút`, inline: true }
+  ],
+  footer: { text: `Yêu cầu bởi ${interaction.user.username}`, icon_url: interaction.user.displayAvatarURL() },
+  timestamp: new Date(),
+};
 
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId("pause")
-            .setLabel("⏸️ Pause")
-            .setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder()
-            .setCustomId("resume")
-            .setLabel("▶️ Resume")
-            .setStyle(ButtonStyle.Success),
-          new ButtonBuilder()
-            .setCustomId("skip")
-            .setLabel("⏭️ Skip")
-            .setStyle(ButtonStyle.Primary),
-          new ButtonBuilder()
-            .setCustomId("queue")
-            .setLabel("📃 Queue")
-            .setStyle(ButtonStyle.Secondary),
-        );
 
-      await interaction.reply({ embeds: [embed], components: [row] });
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("pause")
+          .setLabel("⏸️ Pause")
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId("resume")
+          .setLabel("▶️ Resume")
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId("skip")
+          .setLabel("⏭️ Skip")
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId("queue")
+          .setLabel("📃 Queue")
+          .setStyle(ButtonStyle.Secondary)
+      );
 
+      await interaction.reply({ embeds: [embed], components: [row] }); 
     } catch (err) {
       console.error(err);
       await interaction.reply("❌ Không thể phát nhạc từ link này.");
@@ -319,54 +323,56 @@ client.on("interactionCreate", async (interaction) => {
     let result;
 
     if (sum > INT32_MAX) {
-        result = INT32_MIN - (sum - INT32_MAX + 1);
+      result = INT32_MIN - (sum - INT32_MAX + 1);
     } else if (sum < INT32_MIN) {
-        result = INT32_MAX + 1 + (sum - INT32_MIN);
+      result = INT32_MAX + 1 + (sum - INT32_MIN);
     } else {
-        result = sum;
-    } 
+      result = sum;
+    }
     // 👉 Xác định Mut Dương hay Mut Âm
     const mutType = result >= 0 ? "☀️ Mut Dương" : "🌑 Mut Âm";
 
     // 👉 Hàm tính tỷ lệ mutation trong ARK
     function calcMutationRate(matri, patri) {
-        if (matri < 0) matri = 0;
-        if (patri < 0) patri = 0;
+      if (matri < 0) matri = 0;
+      if (patri < 0) patri = 0;
 
-        const rolls = 3;
-        const chancePerRoll = 0.025;
+      const rolls = 3;
+      const chancePerRoll = 0.025;
 
-        let effectiveRate;
+      let effectiveRate;
 
-        if (matri >= 20 && patri >= 20) {
-            effectiveRate = 0; // cả 2 full
-        } else if (matri >= 20 || patri >= 20) {
-            effectiveRate = (1 - Math.pow(1 - chancePerRoll, rolls)) / 2;
-        } else {
-            effectiveRate = 1 - Math.pow(1 - chancePerRoll, rolls);
-        }
+      if (matri >= 20 && patri >= 20) {
+        effectiveRate = 0; // cả 2 full
+      } else if (matri >= 20 || patri >= 20) {
+        effectiveRate = (1 - Math.pow(1 - chancePerRoll, rolls)) / 2;
+      } else {
+        effectiveRate = 1 - Math.pow(1 - chancePerRoll, rolls);
+      }
 
-        return (effectiveRate * 100).toFixed(2); // %
+      return (effectiveRate * 100).toFixed(2); // %
     }
-    const mutationRate = calcMutationRate(matri, patri); 
+    const mutationRate = calcMutationRate(matri, patri);
     // 👉 Embed trả về
     return interaction.reply({
-        embeds: [{
-            title: "🧬 Kết quả Check Mutations",
-            color: result >= 0 ? 0x2ecc71 : 0xe74c3c, // xanh nếu dương, đỏ nếu âm
-            fields: [
-                { name: "MatriMutation", value: `\`${matri}\``, inline: true },
-                { name: "PatriMutation", value: `\`${patri}\``, inline: true },
-                // { name: "Tổng", value: `\`${sum}\``, inline: true },
-                { name: "Kết quả", value: `**${result}**`, inline: true },
-                { name: "Loại Mutation", value: mutType, inline: true },
-                { name: "Tỷ lệ Mutation", value: `${mutationRate}%`, inline: true },
-            ],
-            footer: { text: `Giới hạn int32: từ ${INT32_MIN} đến ${INT32_MAX}` },
-            timestamp: new Date(),
-        }],
+      embeds: [
+        {
+          title: "🧬 Kết quả Check Mutations",
+          color: result >= 0 ? 0x2ecc71 : 0xe74c3c, // xanh nếu dương, đỏ nếu âm
+          fields: [
+            { name: "MatriMutation", value: `\`${matri}\``, inline: true },
+            { name: "PatriMutation", value: `\`${patri}\``, inline: true },
+            // { name: "Tổng", value: `\`${sum}\``, inline: true },
+            { name: "Kết quả", value: `**${result}**`, inline: true },
+            { name: "Loại Mutation", value: mutType, inline: true },
+            { name: "Tỷ lệ Mutation", value: `${mutationRate}%`, inline: true },
+          ],
+          footer: { text: `Giới hạn int32: từ ${INT32_MIN} đến ${INT32_MAX}` },
+          timestamp: new Date(),
+        },
+      ],
     });
-} 
+  }
 });
 
 /* ---------- XP khi chat bình thường ---------- */
@@ -397,7 +403,7 @@ client.on("messageCreate", async (msg) => {
       }
     }
   }
-}); 
+});
 /* ---------- Auto role cho thành viên mới ---------- */
 client.on("guildMemberAdd", async (member) => {
   try {
@@ -416,11 +422,11 @@ client.on("guildMemberAdd", async (member) => {
   } catch (err) {
     console.error("❌ Lỗi khi gán role:", err);
   }
-}); 
+});
 /* ---------- Reaction Role ---------- */
 const reactionRoles = {
   "1415421191073562654": "1397120911215296583", // <:Aquatica:1415411111111111> -> role Aquatica
-  "🧬": "1392079828957528074",               // emoji mặc định 🧬 -> role Breeding
+  "🧬": "1392079828957528074", // emoji mặc định 🧬 -> role Breeding
 };
 
 const reactionMessageId = "1211334614623461426"; // ID message có reaction
@@ -458,12 +464,12 @@ client.on("messageReactionRemove", async (reaction, user) => {
 /* ---------- Auto Role Breeding ---------- */
 client.on("guildMemberUpdate", async (oldMember, newMember) => {
   const roleBreedBasic = "1392079828957528074"; // breed basic
-  const roleBreeding = "1415707578029047970";   // breeding
+  const roleBreeding = "1415707578029047970"; // breeding
 
   try {
     // Khi thành viên mới nhận được role breed basic
     if (
-      !oldMember.roles.cache.has(roleBreedBasic) && 
+      !oldMember.roles.cache.has(roleBreedBasic) &&
       newMember.roles.cache.has(roleBreedBasic)
     ) {
       // Nếu chưa có role breeding thì thêm vào
