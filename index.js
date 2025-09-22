@@ -324,8 +324,7 @@ client.on("interactionCreate", async (interaction) => {
         result = INT32_MAX + 1 + (sum - INT32_MIN);
     } else {
         result = sum;
-    }
-
+    } 
     // 👉 Xác định Mut Dương hay Mut Âm
     const mutType = result >= 0 ? "☀️ Mut Dương" : "🌑 Mut Âm";
 
@@ -349,9 +348,7 @@ client.on("interactionCreate", async (interaction) => {
 
         return (effectiveRate * 100).toFixed(2); // %
     }
-
-    const mutationRate = calcMutationRate(matri, patri);
-
+    const mutationRate = calcMutationRate(matri, patri); 
     // 👉 Embed trả về
     return interaction.reply({
         embeds: [{
@@ -369,8 +366,7 @@ client.on("interactionCreate", async (interaction) => {
             timestamp: new Date(),
         }],
     });
-}
- 
+} 
 });
 
 /* ---------- XP khi chat bình thường ---------- */
@@ -401,8 +397,7 @@ client.on("messageCreate", async (msg) => {
       }
     }
   }
-});
-
+}); 
 /* ---------- Auto role cho thành viên mới ---------- */
 client.on("guildMemberAdd", async (member) => {
   try {
@@ -421,8 +416,7 @@ client.on("guildMemberAdd", async (member) => {
   } catch (err) {
     console.error("❌ Lỗi khi gán role:", err);
   }
-});
-
+}); 
 /* ---------- Reaction Role ---------- */
 const reactionRoles = {
   "1415421191073562654": "1397120911215296583", // <:Aquatica:1415411111111111> -> role Aquatica
