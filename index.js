@@ -114,14 +114,14 @@ async function registerCommands() {
       .setName("top")
       .setDescription("Xem top 5 nhiều XP nhất"),
 
-    new SlashCommandBuilder()
-      .setName("play")
-      .setDescription("Phát nhạc từ YouTube")
-      .addStringOption((opt) =>
-        opt.setName("url").setDescription("Link YouTube").setRequired(true)
-      ),
+    // new SlashCommandBuilder()
+    //   .setName("play")
+    //   .setDescription("Phát nhạc từ YouTube")
+    //   .addStringOption((opt) =>
+    //     opt.setName("url").setDescription("Link YouTube").setRequired(true)
+    //   ),
 
-    new SlashCommandBuilder().setName("stop").setDescription("Dừng nhạc"),
+    // new SlashCommandBuilder().setName("stop").setDescription("Dừng nhạc"),
   ].map((cmd) => cmd.toJSON());
 
   const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
