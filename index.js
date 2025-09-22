@@ -51,6 +51,8 @@ const client = new Client({
 
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+
+  client.user.setActivity("ARK Aquatica ASE", { type: 0 });
 });
 
 /* ---------- XP ⇄ ROLE ---------- */
