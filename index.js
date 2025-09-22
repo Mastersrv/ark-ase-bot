@@ -8,7 +8,10 @@ const {
   Routes,
   SlashCommandBuilder,
   PermissionFlagsBits,
-  Partials
+  Partials,
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle
 } = require("discord.js");
 const { QuickDB } = require("quick.db");
 const {
@@ -21,7 +24,7 @@ const {
   NoSubscriberBehavior,
   getVoiceConnection,
 } = require("@discordjs/voice");
-const ytdl = require("ytdl-core");
+const ytdl = require("@distube/ytdl-core");
 const ffmpeg = require("ffmpeg-static");
 const { spawn } = require("child_process");
 
@@ -142,6 +145,29 @@ registerCommands();
 
 /* ---------- Interaction Handler ---------- */
 client.on("interactionCreate", async (interaction) => {
+  // 👉 Xử lý Button trước
+  if (interaction.isButton()) {
+    if (interaction.customId === "pause") {
+      player.pause();
+      return interaction.reply({ content: "⏸️ Đã tạm dừng", ephemeral: true });
+    }
+
+    if (interaction.customId === "resume") {
+      player.unpause();
+      return interaction.reply({ content: "▶️ Tiếp tục phát", ephemeral: true });
+    }
+
+    if (interaction.customId === "skip") {
+      player.stop();
+      return interaction.reply({ content: "⏭️ Đã skip", ephemeral: true });
+    }
+
+    if (interaction.customId === "queue") {
+      return interaction.reply({ content: "📃 Queue hiện chưa được cài đặt", ephemeral: true });
+    }
+  }
+
+  // 👉 Chỉ xử lý Slash Command nếu là Chat Input
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "help") {
@@ -210,9 +236,69 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   if (interaction.commandName === "play") {
-    return interaction.reply(
-      "🎵 Lệnh `/play` hiện đang được nâng cấp, vui lòng thử lại sau!"
-    );
+    const url = interaction.options.getString("url");
+    const channel = interaction.member.voice.channel;
+    if (!channel) return interaction.reply("❌ Bạn phải vào kênh thoại trước!");
+
+    const connection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: interaction.guild.id,
+      adapterCreator: interaction.guild.voiceAdapterCreator,
+    });
+
+    try {
+      const stream = ytdl(url, {
+        filter: "audioonly",
+        quality: "highestaudio",
+        highWaterMark: 1 << 25,
+      });
+      const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
+
+      player.play(resource);
+      connection.subscribe(player);
+
+      await entersState(connection, VoiceConnectionStatus.Ready, 20e3);
+
+      const info = await ytdl.getInfo(url);
+      const embed = {
+        color: 0x1db954,
+        title: `🎵 Đang phát`,
+        description: `[${info.videoDetails.title}](${url})`,
+        thumbnail: { url: info.videoDetails.thumbnails[0].url },
+        fields: [
+          { name: "Kênh", value: info.videoDetails.author.name, inline: true },
+          { name: "Thời lượng", value: `${Math.floor(info.videoDetails.lengthSeconds / 60)} phút`, inline: true }
+        ],
+        footer: { text: `Yêu cầu bởi ${interaction.user.username}`, icon_url: interaction.user.displayAvatarURL() },
+        timestamp: new Date(),
+      };
+
+      const row = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId("pause")
+            .setLabel("⏸️ Pause")
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId("resume")
+            .setLabel("▶️ Resume")
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId("skip")
+            .setLabel("⏭️ Skip")
+            .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId("queue")
+            .setLabel("📃 Queue")
+            .setStyle(ButtonStyle.Secondary),
+        );
+
+      await interaction.reply({ embeds: [embed], components: [row] });
+
+    } catch (err) {
+      console.error(err);
+      await interaction.reply("❌ Không thể phát nhạc từ link này.");
+    }
   }
 
   if (interaction.commandName === "stop") {
