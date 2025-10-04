@@ -63,7 +63,7 @@ client.once("ready", () => {
   // chạy check decay reminder mỗi 1 tiếng
   setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60);
   // refresh message decay mỗi 1 tiếng
-  setInterval(() => decayService.updateDecayMessage(client), 1000 * 30);
+  setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60);
 });
 
 /* ---------- XP ⇄ ROLE ---------- */
@@ -822,7 +822,7 @@ client.once("ready", async () => {
     const channel = await client.channels.fetch(channelId);
 
     // 🧭 Tạo embed “ô box” đẹp ngay từ lúc khởi tạo
-    let description = `**📋 Decay list của <@680726526010064899>**\n*Cập nhật tự động mỗi 30s*\n\n`;
+    let description = `**📋 Decay list của <@680726526010064899>**\n*Cập nhật tự động mỗi 1 giờ*\n\n`;
 
     const boxList = decayService.MAPS.map((map) => {
       return `> 🗺️ **${map}**\n> \`⚫ Chưa thiết lập\``;
@@ -834,7 +834,7 @@ client.once("ready", async () => {
       .setColor(0x1e1f22)
       .setTitle("🛡️ Check Decay - Overview")
       .setDescription(description)
-      .setThumbnail("https://cdn-icons-png.flaticon.com/512/561/561611.png")
+      .setThumbnail(client.user.displayAvatarURL())
       .setTimestamp()
       .setFooter({
         text: "Brought to you by Kalendell • cập nhật tự động",

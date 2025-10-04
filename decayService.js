@@ -138,7 +138,7 @@ async function updateDecayMessage(client) {
     if (error) throw error;
 
     // 🎨 Header mô tả
-    let header = `**📋 Decay list của <@${ownerId}>**\n*Cập nhật tự động mỗi 30s*\n\n`;
+    let header = `**📋 Decay list của <@${ownerId}>**\n*Cập nhật tự động mỗi 1 giờ*\n\n`;
 
     // 🔹 Tạo các “ô map” kiểu list
     const boxList = MAPS.map((map) => {
@@ -171,7 +171,7 @@ async function updateDecayMessage(client) {
       .setColor(0x1e1f22)
       .setTitle("🛡️ Check Decay - Overview")
       .setDescription(description)
-      .setThumbnail("https://cdn-icons-png.flaticon.com/512/561/561611.png")
+      .setThumbnail(client.user.displayAvatarURL())
       .setTimestamp()
       .setFooter({
         text: "Brought to you by Kalendell • cập nhật tự động",
