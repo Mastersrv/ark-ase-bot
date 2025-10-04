@@ -11,7 +11,7 @@ const {
 const MAPS = [
   "TheIsland","Valguero","Ragnarök","TheCenter","CrystalIsles",
   "Aberration","Extinction","ScorchedEarth","Genesis1","Genesis2",
-  "Fjordur","Aquatica"
+  "Fjordur","LostIsland","Aquatica"
 ];
 // Note: bạn có thể thêm map vào đây nếu cần
 
