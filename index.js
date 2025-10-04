@@ -837,7 +837,7 @@ client.once("ready", async () => {
       .setThumbnail(client.user.displayAvatarURL())
       .setTimestamp()
       .setFooter({
-        text: "Brought to you by Kalendell • cập nhật tự động",
+        text: "Brought to you by Ayaka • cập nhật tự động",
         iconURL: client.user.displayAvatarURL(),
       });
 
