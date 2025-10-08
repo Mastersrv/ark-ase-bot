@@ -65,10 +65,10 @@ client.once("ready", () => {
   setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60);
   // refresh message decay mỗi 1 tiếng
   setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60);
-  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 30);
+  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 60 * 60);
   setInterval(async () => {
     await decayServiceASA.updateDecayOverview(client);
-  }, 30 * 1000);
+  }, 1000 * 60 * 60);
   //thêm dòng này
 });
 

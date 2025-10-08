@@ -415,7 +415,7 @@ function buildOverviewEmbedFromOwner(client, ownerId, decays) {
 
   return new EmbedBuilder()
     .setColor(0x1e1f22)
-    .setTitle("🛡️ Check Decay - ASA Overview")
+    .setTitle("🛡️ Check Decay - ASA Phá Đảo Game")
     .setDescription(desc)
     .setThumbnail(client.user.displayAvatarURL())
     .setTimestamp()

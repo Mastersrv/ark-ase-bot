@@ -151,7 +151,7 @@ async function updateDecayMessage(client) {
     if (error) throw error;
 
     // 🎨 Header mô tả
-    let header = `**📋 Decay list của <@${ownerId}>**\n*Cập nhật tự động mỗi 30s*\n\n`;
+    let header = `**📋 Decay list của <@${ownerId}>**\n*Cập nhật tự động mỗi 1 giờ*\n\n`;
 
     // 🔹 Tạo các “ô map” kiểu list
     const boxList = MAPS.map((map) => {
@@ -182,7 +182,7 @@ async function updateDecayMessage(client) {
     // ✨ Embed layout
     const embed = new EmbedBuilder()
       .setColor(0x1e1f22)
-      .setTitle("🛡️ Check Decay - Overview")
+      .setTitle("🛡️ Check Decay - ASE Overview")
       .setDescription(description)
       .setThumbnail(user.displayAvatarURL())
       .setTimestamp()
