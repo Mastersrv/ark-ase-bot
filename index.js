@@ -57,6 +57,21 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
+client.once("ready", () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
+
+  client.user.setActivity("!help | /help", { type: 5 });
+  // chạy check decay reminder mỗi 1 tiếng
+  setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60);
+  // refresh message decay mỗi 1 tiếng
+  setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60);
+  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 60 * 60);
+  setInterval(async () => {
+    await decayServiceASA.updateDecayOverview(client);
+  }, 1000 * 60 * 60);
+  //thêm dòng này
+});
+
 /* ---------- XP ⇄ ROLE ---------- */
 const levelRoles = {
   1: "1393347597359382723",
@@ -1175,20 +1190,22 @@ client.login(process.env.TOKEN);
 /* ---------- DISCORD BOT READY (ASE + ASA) ---------- */
 client.once("ready", async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-  client.user.setActivity("!help | /help", { type: 5 });
 
-  /* =========================================================
-     🧭 PHẦN 1 — KHỞI TẠO CHECK DECAY ASE
-  ========================================================= */
+  // trạng thái bot
+  client.user.setActivity("ARK Aquatica ASE", { type: 0 });
+
+  /* ========== ASE: POST / UPDATE PUBLIC CHECK-DECAY MESSAGE ========== */
   const channelId = process.env.NEWS_CHECKDECAY_ID;
   if (!channelId) {
-    console.warn("⚠️ Chưa có NEWS_CHECKDECAY_ID trong .env — skip ASE overview.");
+    console.warn(
+      "⚠️ Chưa có NEWS_CHECKDECAY_ID trong .env — skip check-decay message (ASE)."
+    );
   } else {
     try {
       const channel = await client.channels.fetch(channelId);
 
-      // 🧱 Tạo embed khởi tạo ASE
-      let description = `**📋 Decay list của <@680726526010064899>**\n*Cập nhật tự động mỗi 1h*\n\n`;
+      // tạo embed khởi tạo
+      let description = `**📋 Decay list của <@680726526010064899>**\n*Cập nhật tự động mỗi 30s*\n\n`;
       const boxList = decayService.MAPS.map(
         (map) => `> 🗺️ **${map}**\n> \`⚫ Chưa thiết lập\``
       ).join("\n\n");
@@ -1205,7 +1222,7 @@ client.once("ready", async () => {
           iconURL: client.user.displayAvatarURL(),
         });
 
-      // 🔘 Nút ASE
+      // nút thao tác (ASE) — đảm bảo components được gửi cùng message
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId("view_my_decay")
@@ -1225,46 +1242,54 @@ client.once("ready", async () => {
           .setStyle(ButtonStyle.Danger)
       );
 
-      // 💾 Lưu hoặc cập nhật message ASE
-      const botMessage = await decayService.getBotMessageRow("check_decay_message");
-      if (botMessage?.message_id) {
-        const old = await channel.messages.fetch(botMessage.message_id).catch(() => null);
-        if (old) {
+      // lưu / cập nhật message ID vào DB (decayService.upsertBotMessage)
+      const botMessage = await decayService.getBotMessageRow(
+        "check_decay_message"
+      );
+      if (botMessage && botMessage.message_id) {
+        try {
+          const old = await channel.messages.fetch(botMessage.message_id);
           await old.edit({ embeds: [embed], components: [row] });
-        } else {
-          const sent = await channel.send({ embeds: [embed], components: [row] });
-          await decayService.upsertBotMessage("check_decay_message", channelId, sent.id);
+        } catch (err) {
+          // nếu message cũ không tìm thấy => gửi lại và upsert
+          const sent = await channel.send({
+            embeds: [embed],
+            components: [row],
+          });
+          await decayService.upsertBotMessage(
+            "check_decay_message",
+            channelId,
+            sent.id
+          );
         }
       } else {
         const sent = await channel.send({ embeds: [embed], components: [row] });
-        await decayService.upsertBotMessage("check_decay_message", channelId, sent.id);
+        await decayService.upsertBotMessage(
+          "check_decay_message",
+          channelId,
+          sent.id
+        );
       }
-
     } catch (err) {
       console.error("❌ Lỗi khi post/update check-decay message (ASE):", err);
     }
   }
 
-  /* =========================================================
-     🧩 PHẦN 2 — KHỞI TẠO CHECK DECAY ASA
-  ========================================================= */
+  /* ========== Chạy interval cho ASE ========== */
+  setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60); // 1 giờ
+  setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60); // 1 giờ
+
+  /* ========== ASA: đảm bảo 1 overview message + intervals ========== */
   try {
+    // ensureOverviewMessage tự kiểm tra NEWS_CHECKDECAY_ID_ASA và sẽ tạo hoặc edit message duy nhất
     await decayServiceASA.ensureOverviewMessage(client);
   } catch (err) {
     console.error("❌ Lỗi ensureOverviewMessage (ASA):", err);
   }
 
-  /* =========================================================
-     ⚙️ PHẦN 3 — ĐẶT LỊCH AUTO UPDATE
-  ========================================================= */
-
-  // ASE mỗi 1 giờ
-  setInterval(() => decayService.checkDecayReminders(client), 30 * 1000);
-  setInterval(() => decayService.updateDecayMessage(client), 30 * 1000);
-
-  // ASA mỗi 30 giây
-  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 30 * 1000);
-  setInterval(() => decayServiceASA.updateDecayOverview(client), 30 * 1000);
+  // reminders + cập nhật overview cho ASA
+  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 60 * 60); // 30s (theo code bạn có)
+  setInterval(() => decayServiceASA.updateDecayOverview(client), 1000 * 60 * 60); // 30s
 
   console.log("✅ Tất cả hệ thống Check Decay (ASE + ASA) đã khởi động!");
 });
