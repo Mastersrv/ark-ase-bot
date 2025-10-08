@@ -182,12 +182,12 @@ async function updateDecayMessage(client) {
     // ✨ Embed layout
     const embed = new EmbedBuilder()
       .setColor(0x1e1f22)
-      .setTitle("🛡️ Check Decay - ASE Overview")
+      .setTitle("🛡️ Check Decay - Overview")
       .setDescription(description)
-      .setThumbnail(user.displayAvatarURL())
+      .setThumbnail(client.user.displayAvatarURL())
       .setTimestamp()
       .setFooter({
-        text: "Brought to you by Kalendell • cập nhật tự động",
+        text: "Brought to you by Ayaka • cập nhật tự động",
         iconURL: client.user.displayAvatarURL(),
       });
 
