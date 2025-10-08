@@ -184,7 +184,7 @@ async function updateDecayMessage(client) {
       .setColor(0x1e1f22)
       .setTitle("🛡️ Check Decay - Overview")
       .setDescription(description)
-      .setThumbnail("https://cdn-icons-png.flaticon.com/512/561/561611.png")
+      .setThumbnail(user.displayAvatarURL())
       .setTimestamp()
       .setFooter({
         text: "Brought to you by Kalendell • cập nhật tự động",

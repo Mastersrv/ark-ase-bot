@@ -55,14 +55,14 @@ async function addOrResetDecayASA(
 ) {
   await ensureUserASA(userId, username);
 
-  // kiểm tra giới hạn 10 map / user
+  // kiểm tra giới hạn 20 map / user
   const { data: existing } = await supabase
     .from("decays_asa")
     .select("*")
     .eq("user_id", userId);
 
-  if (existing && existing.length >= 10)
-    throw new Error("Bạn chỉ có thể add tối đa 10 map!");
+  if (existing && existing.length >= 20)
+    throw new Error("Bạn chỉ có thể add tối đa 20 map!");
 
   // ✅ kiểm tra trùng map_name + map_label
   const duplicate = existing.find(
