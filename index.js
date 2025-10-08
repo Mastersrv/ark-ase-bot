@@ -19,6 +19,7 @@ const {
   EmbedBuilder,
 } = require("discord.js");
 const decayService = require("./decayService");
+const decayServiceASA = require("./decayServiceASA");
 const supabase = require("./supabase");
 const { QuickDB } = require("quick.db");
 const {
@@ -64,6 +65,11 @@ client.once("ready", () => {
   setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60);
   // refresh message decay mỗi 1 tiếng
   setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60);
+  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 30);
+  setInterval(async () => {
+    await decayServiceASA.updateDecayOverview(client);
+  }, 30 * 1000);
+  //thêm dòng này
 });
 
 /* ---------- XP ⇄ ROLE ---------- */
@@ -338,6 +344,170 @@ client.on("interactionCreate", async (interaction) => {
       }
       return;
     }
+
+    if (interaction.customId === "view_my_decay_asa") {
+      const userId = interaction.user.id;
+      const decays = await decayServiceASA.getUserDecaysASA(userId);
+      const embed = await decayServiceASA.buildDecayListEmbed(
+        interaction.user,
+        decays
+      );
+
+      const buttons = decays.map((d) => {
+        const idSafe = d.map_label
+          ? `${d.map_name}_${d.map_label}`.replace(/[^a-zA-Z0-9_-]/g, "")
+          : d.map_name;
+        const label = d.map_label
+          ? `${d.map_name} - ${d.map_label}`
+          : d.map_name;
+
+        return new ButtonBuilder()
+          .setCustomId(`reset_map_asa:${idSafe}`)
+          .setLabel(`Reset ${label}`)
+          .setStyle(ButtonStyle.Secondary);
+      });
+
+      // thêm nút Reset All
+      buttons.push(
+        new ButtonBuilder()
+          .setCustomId("reset_all_asa")
+          .setLabel("Reset tất cả")
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      const rows = [];
+      for (let i = 0; i < buttons.length; i += 5) {
+        rows.push(
+          new ActionRowBuilder().addComponents(...buttons.slice(i, i + 5))
+        );
+      }
+
+      await interaction.reply({
+        embeds: [embed],
+        components: rows,
+        ephemeral: true,
+      });
+      return;
+    }
+    /* ==========================
+   CHECK DECAY — ASA SYSTEM
+========================== */
+    /* Add decay ASA */
+    if (interaction.customId === "add_decay_asa") {
+      const options = decayServiceASA.ASA_MAPS.map((m) => ({
+        label: m,
+        value: m,
+      }));
+      const select = new StringSelectMenuBuilder()
+        .setCustomId("add_decay_select_asa")
+        .setPlaceholder("Chọn map để add check decay ASA")
+        .addOptions(options);
+
+      await interaction.reply({
+        content: "Chọn map bạn muốn add (ASA):",
+        components: [new ActionRowBuilder().addComponents(select)],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    /* Edit decay ASA */
+    if (interaction.customId === "edit_decay_asa") {
+      const decays = await decayServiceASA.getUserDecaysASA(
+        interaction.user.id
+      );
+      if (!decays.length)
+        return interaction.reply({
+          content: "Bạn chưa add map nào để chỉnh (ASA).",
+          ephemeral: true,
+        });
+
+      const options = decays.map((d) => {
+        const idSafe = d.map_label
+          ? `${d.map_name}_${d.map_label}`.replace(/[^a-zA-Z0-9_-]/g, "")
+          : d.map_name;
+        const label = d.map_label
+          ? `${d.map_name} - ${d.map_label} (${d.decay_days} ngày)`
+          : `${d.map_name} (${d.decay_days} ngày)`;
+        return { label, value: idSafe };
+      });
+
+      const select = new StringSelectMenuBuilder()
+        .setCustomId("edit_decay_select_asa")
+        .setPlaceholder("Chọn map để chỉnh")
+        .addOptions(options);
+
+      await interaction.reply({
+        content: "Chọn map ASA để chỉnh thời gian decay:",
+        components: [new ActionRowBuilder().addComponents(select)],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    /* Delete decay ASA */
+    if (interaction.customId === "delete_decay_asa") {
+      const decays = await decayServiceASA.getUserDecaysASA(
+        interaction.user.id
+      );
+      if (!decays.length)
+        return interaction.reply({
+          content: "Bạn chưa add map nào để xóa (ASA).",
+          ephemeral: true,
+        });
+
+      const options = decays.map((d) => {
+        const idSafe = d.map_label
+          ? `${d.map_name}_${d.map_label}`.replace(/[^a-zA-Z0-9_-]/g, "")
+          : d.map_name;
+        const label = d.map_label
+          ? `${d.map_name} - ${d.map_label} (${d.decay_days} ngày)`
+          : `${d.map_name} (${d.decay_days} ngày)`;
+        return { label, value: idSafe };
+      });
+
+      const select = new StringSelectMenuBuilder()
+        .setCustomId("delete_decay_select_asa")
+        .setPlaceholder("Chọn map để xóa")
+        .addOptions(options);
+
+      await interaction.reply({
+        content: "Chọn map ASA để xóa:",
+        components: [new ActionRowBuilder().addComponents(select)],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    /* Reset 1 map */
+    if (interaction.customId.startsWith("reset_map_asa:")) {
+      const identifier = interaction.customId.split(":")[1];
+      // identifier có thể là "THEISLAND_1122" hoặc chỉ "THEISLAND"
+      const [mapName, mapLabel] = identifier.split("_");
+
+      await decayServiceASA.resetDecayASA(
+        interaction.user.id,
+        mapName,
+        mapLabel || null
+      );
+      await interaction.reply({
+        content: `✅ Đã reset decay cho **${mapName}${
+          mapLabel ? " - " + mapLabel : ""
+        }** (ASA).`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    /* Reset All Maps */
+    if (interaction.customId === "reset_all_asa") {
+      await decayServiceASA.resetAllDecaysASA(interaction.user.id);
+      await interaction.reply({
+        content: "✅ Đã reset toàn bộ map decay ASA của bạn.",
+        ephemeral: true,
+      });
+      return;
+    }
   }
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId === "add_decay_select") {
@@ -388,6 +558,113 @@ client.on("interactionCreate", async (interaction) => {
       );
       await interaction.reply({
         content: `Bạn có chắc muốn xóa decay cho ${mapName}?`,
+        components: [confirm],
+        ephemeral: true,
+      });
+      return;
+    }
+
+
+    if (interaction.customId === "add_decay_select_asa") {
+      const mapName = interaction.values[0];
+
+      // Nếu chọn "MAP KHÁC" => mở modal nhập tên map tùy chỉnh
+      if (mapName === "MAP KHÁC") {
+        const modal = new ModalBuilder()
+          .setCustomId("add_decay_custom_asa")
+          .setTitle("Thêm map tùy chỉnh (ASA)")
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("map_custom_name")
+                .setLabel("Tên map tùy chỉnh")
+                .setPlaceholder("Nhập tên map...")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId("decay_days")
+                .setLabel("Số ngày decay")
+                .setPlaceholder("VD: 45")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+            )
+          );
+        await interaction.showModal(modal);
+        return;
+      }
+
+      // Map mặc định => mở modal nhập số ngày decay
+      const modal = new ModalBuilder()
+        .setCustomId(`add_decay_modal_asa:${mapName}`)
+        .setTitle(`Add decay ASA - ${mapName}`)
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("map_label")
+              .setLabel("ID / Tên map phụ (VD: 1122, Base A...)")
+              .setPlaceholder("Không bắt buộc")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("decay_days")
+              .setLabel("Số ngày decay (VD: 45)")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+          )
+        );
+
+      await interaction.showModal(modal);
+      return;
+    }
+
+    // edit map
+    if (interaction.customId === "edit_decay_select_asa") {
+      const identifier = interaction.values[0];
+      const [mapName, mapLabel] = identifier.split("_");
+
+      const modal = new ModalBuilder()
+        .setCustomId(
+          `edit_decay_modal_asa:${mapName}${mapLabel ? "_" + mapLabel : ""}`
+        )
+        .setTitle(
+          `Edit decay ASA - ${mapName}${mapLabel ? " - " + mapLabel : ""}`
+        )
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId("decay_days")
+              .setLabel("Số ngày decay mới (VD: 45)")
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+          )
+        );
+
+      await interaction.showModal(modal);
+      return;
+    }
+
+    // delete map
+    if (interaction.customId === "delete_decay_select_asa") {
+      const identifier = interaction.values[0];
+      const [mapName, mapLabel] = identifier.split("_");
+      const confirm = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(
+            `confirm_delete_asa:${mapName}${mapLabel ? "_" + mapLabel : ""}`
+          )
+          .setLabel(
+            `Xác nhận xóa ${mapName}${mapLabel ? " - " + mapLabel : ""}`
+          )
+          .setStyle(ButtonStyle.Danger)
+      );
+      await interaction.reply({
+        content: `Bạn có chắc muốn xóa decay của **${mapName}${
+          mapLabel ? " - " + mapLabel : ""
+        }** (ASA)?`,
         components: [confirm],
         ephemeral: true,
       });
@@ -461,9 +738,98 @@ client.on("interactionCreate", async (interaction) => {
       }
       return;
     }
+    if (interaction.customId.startsWith("add_decay_modal_asa:")) {
+      const mapName = interaction.customId.split(":")[1];
+      const mapLabel =
+        interaction.fields.getTextInputValue("map_label") || null;
+      const days = parseInt(
+        interaction.fields.getTextInputValue("decay_days"),
+        10
+      );
+      if (isNaN(days) || days <= 0)
+        return interaction.reply({
+          content: "❌ Số ngày không hợp lệ.",
+          ephemeral: true,
+        });
+
+      try {
+        await decayServiceASA.addOrResetDecayASA(
+          interaction.user.id,
+          interaction.user.username,
+          mapName,
+          days,
+          mapLabel
+        );
+        const mapDisplay = mapLabel ? `${mapName} - ${mapLabel}` : mapName;
+        await interaction.reply({
+          content: `✅ Đã thêm **${mapDisplay}** (${days} ngày) (ASA).`,
+          ephemeral: true,
+        });
+      } catch (err) {
+        await interaction.reply({
+          content: `❌ Lỗi khi thêm decay: ${err.message}`,
+          ephemeral: true,
+        });
+      }
+      return;
+    }
+
+    // add map tùy chỉnh
+    if (interaction.customId === "add_decay_custom_asa") {
+      const mapName = interaction.fields.getTextInputValue("map_custom_name");
+      const days = parseInt(
+        interaction.fields.getTextInputValue("decay_days"),
+        10
+      );
+      if (!mapName || isNaN(days) || days <= 0)
+        return interaction.reply({
+          content: "❌ Tên map hoặc số ngày không hợp lệ.",
+          ephemeral: true,
+        });
+
+      try {
+        await decayServiceASA.addOrResetDecayASA(
+          interaction.user.id,
+          interaction.user.username,
+          mapName,
+          days
+        );
+        await interaction.reply({
+          content: `✅ Đã thêm **${mapName}** (${days} ngày) (ASA).`,
+          ephemeral: true,
+        });
+      } catch (err) {
+        await interaction.reply({
+          content: `❌ Lỗi khi thêm decay: ${err.message}`,
+          ephemeral: true,
+        });
+      }
+      return;
+    }
+
+    // edit map
+    if (interaction.customId.startsWith("edit_decay_modal_asa:")) {
+      const mapName = interaction.customId.split(":")[1];
+      const days = parseInt(
+        interaction.fields.getTextInputValue("decay_days"),
+        10
+      );
+      if (isNaN(days) || days <= 0)
+        return interaction.reply({
+          content: "❌ Số ngày không hợp lệ.",
+          ephemeral: true,
+        });
+
+      await decayServiceASA.editDecayASA(interaction.user.id, mapName, days);
+      await interaction.reply({
+        content: `✅ Đã cập nhật **${mapName}** → ${days} ngày (ASA).`,
+        ephemeral: true,
+      });
+      return;
+    }
   }
 
-    // CONFIRM delete button
+  // CONFIRM delete button
   if (
     interaction.isButton() &&
     interaction.customId &&
@@ -480,6 +846,26 @@ client.on("interactionCreate", async (interaction) => {
       console.error(err);
       await interaction.reply({ content: "❌ Lỗi khi xóa", ephemeral: true });
     }
+    return;
+  }// CONFIRM delete button (ASA)
+  if (
+    interaction.isButton() &&
+    interaction.customId.startsWith("confirm_delete_asa:")
+  ) {
+    const identifier = interaction.customId.split(":")[1];
+    const [mapName, mapLabel] = identifier.split("_");
+
+    await decayServiceASA.deleteDecayASA(
+      interaction.user.id,
+      mapName,
+      mapLabel || null
+    );
+    await interaction.reply({
+      content: `✅ Đã xóa decay **${mapName}${
+        mapLabel ? " - " + mapLabel : ""
+      }** (ASA).`,
+      ephemeral: true,
+    });
     return;
   }
 
@@ -647,11 +1033,9 @@ client.on("interactionCreate", async (interaction) => {
       result = INT32_MAX + 1 + (sum - INT32_MIN);
     } else {
       result = sum;
-    }
-    // 👉 Xác định Mut Dương hay Mut Âm
+    } 
     const mutType = result >= 0 ? "☀️ Mut Dương" : "🌑 Mut Âm";
-
-    // 👉 Hàm tính tỷ lệ mutation trong ARK
+ 
     function calcMutationRate(matri, patri) {
       if (matri < 0) matri = 0;
       if (patri < 0) patri = 0;
@@ -804,72 +1188,82 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
 
 client.login(process.env.TOKEN);
 
-// check-decay service
+/* ---------- DISCORD BOT READY (ASE + ASA) ---------- */
 client.once("ready", async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+
+  // trạng thái bot
   client.user.setActivity("ARK Aquatica ASE", { type: 0 });
 
-  // ========== POST/UPDATE PUBLIC CHECK-DECAY MESSAGE ==========
+  /* ========== ASE: POST / UPDATE PUBLIC CHECK-DECAY MESSAGE ========== */
   const channelId = process.env.NEWS_CHECKDECAY_ID;
   if (!channelId) {
     console.warn(
-      "⚠️ Chưa có NEWS_CHECKDECAY_ID trong .env — skip check-decay message."
+      "⚠️ Chưa có NEWS_CHECKDECAY_ID trong .env — skip check-decay message (ASE)."
     );
-    return;
-  }
+  } else {
+    try {
+      const channel = await client.channels.fetch(channelId);
 
-  try {
-    const channel = await client.channels.fetch(channelId);
+      // tạo embed khởi tạo
+      let description = `**📋 Decay list của <@680726526010064899>**\n*Cập nhật tự động mỗi 30s*\n\n`;
+      const boxList = decayService.MAPS.map(
+        (map) => `> 🗺️ **${map}**\n> \`⚫ Chưa thiết lập\``
+      ).join("\n\n");
+      description += boxList;
 
-    // 🧭 Tạo embed “ô box” đẹp ngay từ lúc khởi tạo
-    let description = `**📋 Decay list của <@680726526010064899>**\n*Cập nhật tự động mỗi 1 giờ*\n\n`;
+      const embed = new EmbedBuilder()
+        .setColor(0x1e1f22)
+        .setTitle("🛡️ Check Decay - Overview")
+        .setDescription(description)
+        .setThumbnail(client.user.displayAvatarURL())
+        .setTimestamp()
+        .setFooter({
+          text: "Brought to you by Ayaka • cập nhật tự động",
+          iconURL: client.user.displayAvatarURL(),
+        });
 
-    const boxList = decayService.MAPS.map((map) => {
-      return `> 🗺️ **${map}**\n> \`⚫ Chưa thiết lập\``;
-    }).join("\n\n");
+      // nút thao tác (ASE) — đảm bảo components được gửi cùng message
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("view_my_decay")
+          .setLabel("Hiển thị check decay của bạn")
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId("add_decay")
+          .setLabel("Add check decay")
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId("edit_decay")
+          .setLabel("Edit check decay")
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId("delete_decay")
+          .setLabel("Delete decay")
+          .setStyle(ButtonStyle.Danger)
+      );
 
-    description += boxList;
-
-    const embed = new EmbedBuilder()
-      .setColor(0x1e1f22)
-      .setTitle("🛡️ Check Decay - Overview")
-      .setDescription(description)
-      .setThumbnail(client.user.displayAvatarURL())
-      .setTimestamp()
-      .setFooter({
-        text: "Brought to you by Ayaka • cập nhật tự động",
-        iconURL: client.user.displayAvatarURL(),
-      });
-
-    // 🔘 Nút chức năng
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("view_my_decay")
-        .setLabel("Hiển thị check decay của bạn")
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId("add_decay")
-        .setLabel("Add check decay")
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId("edit_decay")
-        .setLabel("Edit check decay")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId("delete_decay")
-        .setLabel("Delete decay")
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    // 💾 Lưu / cập nhật message ID trong Supabase
-    const botMessage = await decayService.getBotMessageRow(
-      "check_decay_message"
-    );
-    if (botMessage && botMessage.message_id) {
-      try {
-        const old = await channel.messages.fetch(botMessage.message_id);
-        await old.edit({ embeds: [embed], components: [row] });
-      } catch (err) {
+      // lưu / cập nhật message ID vào DB (decayService.upsertBotMessage)
+      const botMessage = await decayService.getBotMessageRow(
+        "check_decay_message"
+      );
+      if (botMessage && botMessage.message_id) {
+        try {
+          const old = await channel.messages.fetch(botMessage.message_id);
+          await old.edit({ embeds: [embed], components: [row] });
+        } catch (err) {
+          // nếu message cũ không tìm thấy => gửi lại và upsert
+          const sent = await channel.send({
+            embeds: [embed],
+            components: [row],
+          });
+          await decayService.upsertBotMessage(
+            "check_decay_message",
+            channelId,
+            sent.id
+          );
+        }
+      } else {
         const sent = await channel.send({ embeds: [embed], components: [row] });
         await decayService.upsertBotMessage(
           "check_decay_message",
@@ -877,15 +1271,26 @@ client.once("ready", async () => {
           sent.id
         );
       }
-    } else {
-      const sent = await channel.send({ embeds: [embed], components: [row] });
-      await decayService.upsertBotMessage(
-        "check_decay_message",
-        channelId,
-        sent.id
-      );
+    } catch (err) {
+      console.error("❌ Lỗi khi post/update check-decay message (ASE):", err);
     }
-  } catch (err) {
-    console.error("❌ Lỗi khi post/update check-decay message:", err);
   }
+
+  /* ========== Chạy interval cho ASE ========== */
+  setInterval(() => decayService.checkDecayReminders(client), 30 * 1000); // 1 giờ
+  setInterval(() => decayService.updateDecayMessage(client), 30 * 1000); // 1 giờ
+
+  /* ========== ASA: đảm bảo 1 overview message + intervals ========== */
+  try {
+    // ensureOverviewMessage tự kiểm tra NEWS_CHECKDECAY_ID_ASA và sẽ tạo hoặc edit message duy nhất
+    await decayServiceASA.ensureOverviewMessage(client);
+  } catch (err) {
+    console.error("❌ Lỗi ensureOverviewMessage (ASA):", err);
+  }
+
+  // reminders + cập nhật overview cho ASA
+  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 30 * 1000); // 30s (theo code bạn có)
+  setInterval(() => decayServiceASA.updateDecayOverview(client), 30 * 1000); // 30s
+
+  console.log("✅ Tất cả hệ thống Check Decay (ASE + ASA) đã khởi động!");
 });

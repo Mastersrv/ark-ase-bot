@@ -93,34 +93,47 @@ async function upsertBotMessage(key, channel_id, message_id) {
  * - tránh spam nhờ cột last_notified_days
  */
 async function checkDecayReminders(client) {
-  const { data: decays, error } = await supabase.from('decays').select('*');
+  const { data: decays, error } = await supabase.from("decays").select("*");
   if (error) {
-    console.error("Lỗi lấy dữ liệu decay:", error);
+    console.error("❌ Lỗi lấy dữ liệu decay:", error);
     return;
   }
 
   for (const d of decays) {
     const end = new Date(d.start_time).getTime() + d.decay_days * 24 * 60 * 60 * 1000;
-    const leftDays = Math.floor((end - Date.now()) / (24 * 3600 * 1000));
+    const leftMs = end - Date.now();
+    const leftDays = Math.max(0, Math.floor(leftMs / (24 * 3600 * 1000)));
+    const leftHours = Math.max(0, Math.floor((leftMs % (24 * 3600 * 1000)) / (3600 * 1000)));
 
+    // Chỉ gửi khi còn 3 / 2 / 1 ngày và chưa gửi cho mốc đó
     if ([3, 2, 1].includes(leftDays) && d.last_notified_days !== leftDays) {
       try {
-        const channelId = process.env.NEWS_SPAM_ID;
-        const channel = await client.channels.fetch(channelId);
+        const user = await client.users.fetch(d.user_id).catch(() => null);
+        if (!user) continue;
 
-        await channel.send(
-          `⚠️ <@${d.user_id}> base của bạn ở **${d.map_name}** chỉ còn **${leftDays} ngày** decay!`
+        // Gọi embed chuyên nghiệp (hàm bạn đã thêm ở decayService.js)
+        await sendDecayAlertEmbed(
+          client,
+          user,
+          d.map_name,
+          d.map_label,
+          leftDays,
+          leftHours,
+          "ASE"
         );
 
-        await supabase.from('decays')
+        // Cập nhật mốc đã gửi
+        await supabase
+          .from("decays")
           .update({ last_notified_days: leftDays })
-          .eq('id', d.id);
+          .eq("id", d.id);
       } catch (err) {
-        console.error("Lỗi khi gửi cảnh báo decay:", err);
+        console.error("❌ Lỗi khi gửi cảnh báo ASE:", err);
       }
     }
   }
 }
+
 async function updateDecayMessage(client) {
   try {
     const row = await getBotMessageRow("check_decay_message");
@@ -138,7 +151,7 @@ async function updateDecayMessage(client) {
     if (error) throw error;
 
     // 🎨 Header mô tả
-    let header = `**📋 Decay list của <@${ownerId}>**\n*Cập nhật tự động mỗi 1 giờ*\n\n`;
+    let header = `**📋 Decay list của <@${ownerId}>**\n*Cập nhật tự động mỗi 30s*\n\n`;
 
     // 🔹 Tạo các “ô map” kiểu list
     const boxList = MAPS.map((map) => {
@@ -171,10 +184,10 @@ async function updateDecayMessage(client) {
       .setColor(0x1e1f22)
       .setTitle("🛡️ Check Decay - Overview")
       .setDescription(description)
-      .setThumbnail(client.user.displayAvatarURL())
+      .setThumbnail("https://cdn-icons-png.flaticon.com/512/561/561611.png")
       .setTimestamp()
       .setFooter({
-        text: "Brought to you by Ayaka • cập nhật tự động",
+        text: "Brought to you by Kalendell • cập nhật tự động",
         iconURL: client.user.displayAvatarURL(),
       });
 
@@ -206,6 +219,61 @@ async function updateDecayMessage(client) {
 
 
 
+/**
+ * Gửi thông báo decay chuyên nghiệp cho ASE (ảnh nền GIF ngẫu nhiên)
+ * @param {object} client - Discord Client
+ * @param {object} user - User Discord (người nhận)
+ * @param {string} mapName - Tên map (vd: THEISLAND)
+ * @param {number} daysLeft - Ngày còn lại
+ * @param {number} hoursLeft - Giờ còn lại
+ */
+async function sendDecayAlertEmbed(client, user, mapName, daysLeft, hoursLeft) {
+  // 🎨 Màu và icon theo thời gian còn lại
+  let color = 0xf1c40f; // vàng mặc định (3 ngày)
+  let icon = "⚠️";
+  if (daysLeft <= 2) {
+    color = 0xe74c3c; // đỏ khẩn cấp
+    icon = "🚨";
+  }
+
+  // 🌆 Ảnh GIF nền ngẫu nhiên (bạn thay 5 link này bằng link từ Discord)
+  const backgroundGifs = [
+    "https://media.discordapp.net/attachments/.../image1.gif",
+    "https://media.discordapp.net/attachments/.../image2.gif",
+    "https://media.discordapp.net/attachments/.../image3.gif",
+    "https://media.discordapp.net/attachments/.../image4.gif",
+    "https://media.discordapp.net/attachments/.../image5.gif"
+  ];
+  const randomImage = backgroundGifs[Math.floor(Math.random() * backgroundGifs.length)];
+
+  // 🧱 Tạo embed cảnh báo đẹp mắt
+  const embed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(`${icon} BASE DECAY WARNING (ASE)`)
+    .setDescription(
+      `**<@${user.id}>**, base của bạn sắp bị decay!\n\n` +
+      `🗺️ **Map:** ${mapName.toUpperCase()}\n` +
+      `⏳ **Thời gian còn lại:** ${daysLeft} ngày ${hoursLeft} giờ\n` +
+      `📅 **Hệ thống:** ASE\n\n` +
+      `> Hãy vào game và chạm vào base để reset decay trước khi hết hạn.`
+    )
+    .setThumbnail(user.displayAvatarURL())
+    .setImage(randomImage)
+    .setTimestamp()
+    .setFooter({
+      text: "Brought to you by Ayaka • ASE Decay Monitor",
+      iconURL: client.user.displayAvatarURL()
+    });
+
+  // 📢 Gửi tin nhắn đến channel thông báo ASE
+  const channelId = process.env.NEWS_SPAM_ID;
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  if (!channel) return console.warn("⚠️ Không tìm thấy channel thông báo ASE");
+
+  await channel.send({ embeds: [embed] });
+}
+
+
 
 module.exports = {
   MAPS,
@@ -218,5 +286,6 @@ module.exports = {
   getBotMessageRow,
   upsertBotMessage,
   updateDecayMessage,
-  checkDecayReminders
+  checkDecayReminders,
+  sendDecayAlertEmbed
 };
