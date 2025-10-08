@@ -62,9 +62,9 @@ client.once("ready", () => {
 
   client.user.setActivity("!help | /help", { type: 5 });
   // chạy check decay reminder mỗi 1 tiếng
-  setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60);
+  setInterval(() => decayService.checkDecayReminders(client), 1000 * 30);
   // refresh message decay mỗi 1 tiếng
-  setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60);
+  setInterval(() => decayService.updateDecayMessage(client), 1000 * 30);
   setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 60 * 60);
   setInterval(async () => {
     await decayServiceASA.updateDecayOverview(client);
@@ -1276,8 +1276,8 @@ client.once("ready", async () => {
   }
 
   /* ========== Chạy interval cho ASE ========== */
-  setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60); // 1 giờ
-  setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60); // 1 giờ
+  setInterval(() => decayService.checkDecayReminders(client), 1000 * 30); // 1 giờ
+  setInterval(() => decayService.updateDecayMessage(client), 1000 * 30); // 1 giờ
 
   /* ========== ASA: đảm bảo 1 overview message + intervals ========== */
   try {
