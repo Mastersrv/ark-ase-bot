@@ -417,7 +417,7 @@ function buildOverviewEmbedFromOwner(client, ownerId, decays) {
     .setColor(0x1e1f22)
     .setTitle("🛡️ Check Decay - ASA Phá Đảo Game")
     .setDescription(desc)
-    .setThumbnail(client.user.displayAvatarURL())
+    .channel.guild.iconURL()
     .setTimestamp()
     .setFooter({
       text: "Brought to you by Ayaka • ASA System",
