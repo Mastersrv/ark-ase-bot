@@ -65,10 +65,10 @@ client.once("ready", () => {
   setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60);
   // refresh message decay mỗi 1 tiếng
   setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60);
-  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 60 * 60);
+  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 30);
   setInterval(async () => {
     await decayServiceASA.updateDecayOverview(client);
-  }, 1000 * 60 * 60);
+  }, 30 * 1000);
   //thêm dòng này
 });
 
@@ -1276,8 +1276,8 @@ client.once("ready", async () => {
   }
 
   /* ========== Chạy interval cho ASE ========== */
-  setInterval(() => decayService.checkDecayReminders(client), 1000 * 60 * 60); // 1 giờ
-  setInterval(() => decayService.updateDecayMessage(client), 1000 * 60 * 60); // 1 giờ
+  setInterval(() => decayService.checkDecayReminders(client), 30 * 1000); // 1 giờ
+  setInterval(() => decayService.updateDecayMessage(client), 30 * 1000); // 1 giờ
 
   /* ========== ASA: đảm bảo 1 overview message + intervals ========== */
   try {
@@ -1288,8 +1288,8 @@ client.once("ready", async () => {
   }
 
   // reminders + cập nhật overview cho ASA
-  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 1000 * 60 * 60); // 30s (theo code bạn có)
-  setInterval(() => decayServiceASA.updateDecayOverview(client), 1000 * 60 * 60); // 30s
+  setInterval(() => decayServiceASA.checkDecayRemindersASA(client), 30 * 1000); // 30s (theo code bạn có)
+  setInterval(() => decayServiceASA.updateDecayOverview(client), 30 * 1000); // 30s
 
   console.log("✅ Tất cả hệ thống Check Decay (ASE + ASA) đã khởi động!");
 });
