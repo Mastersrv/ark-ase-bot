@@ -564,7 +564,6 @@ client.on("interactionCreate", async (interaction) => {
       return;
     }
 
-
     if (interaction.customId === "add_decay_select_asa") {
       const mapName = interaction.values[0];
 
@@ -847,7 +846,7 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({ content: "❌ Lỗi khi xóa", ephemeral: true });
     }
     return;
-  }// CONFIRM delete button (ASA)
+  } // CONFIRM delete button (ASA)
   if (
     interaction.isButton() &&
     interaction.customId.startsWith("confirm_delete_asa:")
@@ -1033,9 +1032,9 @@ client.on("interactionCreate", async (interaction) => {
       result = INT32_MAX + 1 + (sum - INT32_MIN);
     } else {
       result = sum;
-    } 
+    }
     const mutType = result >= 0 ? "☀️ Mut Dương" : "🌑 Mut Âm";
- 
+
     function calcMutationRate(matri, patri) {
       if (matri < 0) matri = 0;
       if (patri < 0) patri = 0;

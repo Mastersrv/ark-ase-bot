@@ -442,8 +442,7 @@ async function sendDecayAlertEmbed(client, user, mapName, mapLabel, daysLeft, ho
     color = 0xe74c3c; // đỏ (≤ 2 ngày)
     icon = "🚨";
   }
-
-  // 🌆 Danh sách 5 ảnh GIF nền (bạn thay link Discord GIF vào đây)
+ 
   const backgroundGifs = [
     "https://media.discordapp.net/attachments/.../asa1.gif",
     "https://media.discordapp.net/attachments/.../asa2.gif",
